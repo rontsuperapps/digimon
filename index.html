@@ -559,9 +559,10 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    kolom (biru=total, oranye=mitra, teal=sdi) tetap kelihatan di baris genap —
    sebelumnya rule ini menimpa background jadi flat abu-abu dan menghilangkan
    pewarnaan kategori, itulah sumber tampilan "berantakan" pewarnaan. */
-.pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { filter: brightness(0.97); }
-[data-theme="dark"] .pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { filter: brightness(1.14); }
-.pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg) !important; filter: none; }
+/* Zebra-stripe dihapus -- pewarnaan sudah dibedakan per kategori kolom
+   (biru=total, oranye=mitra, teal=sdi), jadi selang-seling baris malah
+   bikin warnanya keliatan belang/tidak konsisten. Highlight cukup pakai hover. */
+.pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg) !important; }
 .pivot-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin-top: 8px; }
 /* Variant "full" (rekap Go Live per District/Sub District): kolom sangat
    banyak (25), jadi JANGAN dipaksa table-layout:fixed 100% lebar
@@ -575,13 +576,23 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r3 th { position: sticky; }
 .pivot-table-wrap-full .pivot-grouped-table th,
 .pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 62px; }
-.pivot-table-wrap-full .pivot-grouped-table th:first-child,
-.pivot-table-wrap-full .pivot-grouped-table td:first-child {
+/* PENTING: kolom DISTRICT/SUB DISTRICT pakai rowspan="3", jadi th:first-child
+   di baris ke-2 & ke-3 <thead> BUKAN kolom identitas itu -- itu sebenarnya
+   header LOP/ODP/PORT pertama (numerik). Sebelumnya rule ini salah menembak
+   th:first-child secara umum, sehingga kolom LOP row-2/3 ikut dipaksa lebar
+   150-220px + sticky, dobel-tumpuk dengan kolom DISTRICT dan bikin lebar
+   kolom & background header berantakan. Sekarang ditarget spesifik lewat
+   class .hdr-navy (satu-satunya sel identitas, ada di semua 3 baris lewat
+   rowspan) untuk header, dan tbody td:first-child untuk baris data (di body
+   TIDAK ada rowspan jadi first-child body selalu benar).             */
+.pivot-table-wrap-full .pivot-grouped-table th.hdr-navy,
+.pivot-table-wrap-full .pivot-grouped-table tbody td:first-child {
   min-width: 150px; max-width: 220px; white-space: normal; word-break: break-word;
-  position: sticky; left: 0; z-index: 3; background: var(--table-th-bg);
+  position: sticky; left: 0;
   box-shadow: 2px 0 4px rgba(16,24,40,0.08);
 }
-.pivot-table-wrap-full .pivot-grouped-table thead th:first-child { z-index: 5; background: var(--table-th-bg); }
+.pivot-table-wrap-full .pivot-grouped-table th.hdr-navy { z-index: 5; }
+.pivot-table-wrap-full .pivot-grouped-table tbody td:first-child { z-index: 3; background: var(--pivot-blue-bg); }
 .pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--pivot-navy-grand); }
 /* Petunjuk geser horizontal — 25 kolom tidak akan pernah muat di layar HP,
    jadi user perlu tahu harus scroll ke samping, bukan mengira tabel "putus". */
@@ -594,8 +605,8 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
   .pivot-grouped-table td { padding: 4px 3px; }
   .pivot-table-wrap-full .pivot-grouped-table th,
   .pivot-table-wrap-full .pivot-grouped-table td { min-width: 50px; }
-  .pivot-table-wrap-full .pivot-grouped-table th:first-child,
-  .pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 118px; max-width: 140px; }
+  .pivot-table-wrap-full .pivot-grouped-table th.hdr-navy,
+  .pivot-table-wrap-full .pivot-grouped-table tbody td:first-child { min-width: 118px; max-width: 140px; }
   .golive-scroll-hint { display: flex; }
 }
 
@@ -670,7 +681,7 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 
 /* Sel data (body) */
 .pivot-grouped-table td.num-cell { text-align: center !important; font-variant-numeric: tabular-nums; }
-.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--table-th-bg); border-right: 2px solid var(--pivot-blue); }
+.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--pivot-blue-bg); }
 [data-theme="dark"] .pivot-grouped-table td.label-cell { color: var(--text-title); }
 .pivot-grouped-table td.cell-total { background: var(--pivot-blue-bg); font-weight: 700; }
 .pivot-grouped-table td.cell-mitra { background: var(--pivot-orange-bg); }

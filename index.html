@@ -580,6 +580,27 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .keterangan-pivot-bar-track { background: var(--table-th-bg); border-radius: 4px; height: 5px; overflow: hidden; }
 .keterangan-pivot-bar-fill { height: 100%; background: var(--accent-color); border-radius: 4px; }
 
+/* ── Rekap Pivot Monitoring Go Live (per DISTRICT / SUB DISTRICT) ── */
+.golive-summary-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 14px 16px; margin-bottom: 16px; }
+.golive-summary-card + .golive-summary-card { margin-top: 0; }
+.golive-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.golive-summary-title { font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
+.golive-summary-title i { color: var(--accent-color); font-size: 12px; }
+.golive-summary-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; }
+.golive-summary-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.golive-summary-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.golive-summary-legend .dot-mitra { background: var(--accent-color); }
+.golive-summary-legend .dot-sdi { background: var(--accent-cyan); }
+.pivot-grouped-table thead th.hdr-mitra { background: var(--accent-glow); color: var(--accent-color-hover); }
+.pivot-grouped-table thead th.hdr-sdi { background: var(--accent-cyan-bg); color: var(--accent-cyan); }
+.pivot-grouped-table thead th.hdr-total { background: var(--table-th-bg); }
+.pivot-grouped-table td.num-cell { text-align: center !important; font-variant-numeric: tabular-nums; }
+.pivot-grouped-table td.num-cell.total-cell { font-weight: 700; background: var(--table-th-bg); }
+.pivot-grouped-table tbody tr.pivot-total-row td { background: var(--sb-active-bg); font-weight: 800; color: var(--text-title); }
+.pivot-grouped-table tbody tr.pivot-total-row td.total-cell { background: var(--accent-glow); }
+.golive-summary-empty { text-align: center; padding: 26px 10px; color: var(--text-muted); font-size: 11.5px; }
+.golive-summary-empty i { font-size: 20px; opacity: .4; display: block; margin-bottom: 8px; }
+
 .chart-box { background: var(--card-bg); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); }
 .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-title); text-align: left; }
 .chart-wrapper { height: 112px; position: relative; width: 100%; }
@@ -979,6 +1000,98 @@ tbody tr:hover td { background: var(--table-th-bg); }
          ══════════════════════════════════════════════════════════ -->
     <div class="page-section" id="page-monitoring-golive">
 
+      <!-- ══════════════════════════════════════════════════════════
+           REKAP PIVOT — PER DISTRICT
+           Filter wajib: NEW STATUS = FI-OGP GO LIVE / GO LIVE.
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-summary-card">
+        <div class="golive-summary-head">
+          <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per District</div>
+          <div class="golive-summary-legend">
+            <span><i class="dot-mitra"></i> MITRA</span>
+            <span><i class="dot-sdi"></i> SDI</span>
+          </div>
+        </div>
+        <div class="pivot-table-wrap pivot-table-wrap-full">
+          <table class="pivot-grouped-table" id="glSummaryDistrictTable">
+            <thead>
+              <tr>
+                <th rowspan="2">DISTRICT</th>
+                <th colspan="3" class="hdr-total group-divider">TOTAL</th>
+                <th colspan="3" class="hdr-mitra">CREATE ABD</th>
+                <th colspan="3" class="hdr-mitra">REVISION ABD</th>
+                <th colspan="3" class="hdr-mitra group-divider">KENDALA ABD</th>
+                <th colspan="3" class="hdr-sdi">VALIDATION</th>
+                <th colspan="3" class="hdr-sdi">DRAWING</th>
+                <th colspan="3" class="hdr-sdi">TERMINATION</th>
+                <th colspan="3" class="hdr-sdi">GO LIVE</th>
+              </tr>
+              <tr>
+                <th class="hdr-total">LOP</th><th class="hdr-total">ODP</th><th class="hdr-total group-divider">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra group-divider">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+              </tr>
+            </thead>
+            <tbody id="gl-summary-district-target">
+              <tr><td colspan="25" class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap per district...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pivot-note">Data dihitung hanya dari baris dengan NEW STATUS = "FI-OGP GO LIVE" atau "GO LIVE".</div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           REKAP PIVOT — PER SUB DISTRICT
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-summary-card">
+        <div class="golive-summary-head">
+          <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per Sub District</div>
+          <div class="golive-summary-legend">
+            <span><i class="dot-mitra"></i> MITRA</span>
+            <span><i class="dot-sdi"></i> SDI</span>
+          </div>
+        </div>
+        <div class="pivot-table-wrap pivot-table-wrap-full">
+          <table class="pivot-grouped-table" id="glSummarySubDistrictTable">
+            <thead>
+              <tr>
+                <th rowspan="2">SUB DISTRICT</th>
+                <th colspan="3" class="hdr-total group-divider">TOTAL</th>
+                <th colspan="3" class="hdr-mitra">CREATE ABD</th>
+                <th colspan="3" class="hdr-mitra">REVISION ABD</th>
+                <th colspan="3" class="hdr-mitra group-divider">KENDALA ABD</th>
+                <th colspan="3" class="hdr-sdi">VALIDATION</th>
+                <th colspan="3" class="hdr-sdi">DRAWING</th>
+                <th colspan="3" class="hdr-sdi">TERMINATION</th>
+                <th colspan="3" class="hdr-sdi">GO LIVE</th>
+              </tr>
+              <tr>
+                <th class="hdr-total">LOP</th><th class="hdr-total">ODP</th><th class="hdr-total group-divider">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
+                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra group-divider">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+              </tr>
+            </thead>
+            <tbody id="gl-summary-subdistrict-target">
+              <tr><td colspan="25" class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap per sub district...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pivot-note">Data dihitung hanya dari baris dengan NEW STATUS = "FI-OGP GO LIVE" atau "GO LIVE".</div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           TABEL LIST DETAIL (per-baris project) — tetap dipertahankan
+           ══════════════════════════════════════════════════════════ -->
       <div class="table-container">
         <div class="table-search-bar">
           <div class="search-input-wrap">
@@ -1278,6 +1391,16 @@ tbody tr:hover td { background: var(--table-th-bg); }
     let monitoringGoLivePageSize    = 20;
     let isFetchingMonitoringGoLive  = false;
     let monitoringGoLiveLoadedOnce  = false;
+
+    let isFetchingGoLiveSummary     = false;
+    let goLiveSummaryLoadedOnce     = false;
+
+    // Urutan bucket MITRA/SDI harus SAMA dengan urutan kolom di <thead>
+    // tabel rekap (lihat markup #glSummaryDistrictTable / #glSummarySubDistrictTable).
+    const GOLIVE_SUMMARY_BUCKET_ORDER = [
+      'createAbd', 'revisionAbd', 'kendalaAbd',
+      'validation', 'drawing', 'termination', 'goLive'
+    ];
 
     // PWA — daftarkan service worker (app-shell cache untuk mode offline).
     if ('serviceWorker' in navigator) {
@@ -1643,6 +1766,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
         document.getElementById('pageTitle').innerText    = 'Monitoring Go Live';
         document.getElementById('pageSubtitle').innerText = 'Status & tanggal go live tiap project FBB Jatim';
         if (!monitoringGoLiveLoadedOnce) fetchMonitoringGoLiveData();
+        if (!goLiveSummaryLoadedOnce) fetchGoLiveSummary();
       } else {
         document.getElementById('page-monitoring-project').classList.add('active-page');
         syncSidebarActiveState('nav-monitoring-project');
@@ -1841,6 +1965,92 @@ tbody tr:hover td { background: var(--table-th-bg); }
     function forceRefreshMonitoringGoLiveData() {
       document.querySelector('.btn-refresh').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
       fetchMonitoringGoLiveData();
+      fetchGoLiveSummary();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── REKAP PIVOT GO LIVE (PER DISTRICT / SUB DISTRICT) ──
+    // ══════════════════════════════════════════════════════════════
+
+    function fetchGoLiveSummary() {
+      if (isFetchingGoLiveSummary) return;
+      isFetchingGoLiveSummary = true;
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          isFetchingGoLiveSummary = false;
+          goLiveSummaryLoadedOnce = true;
+
+          if (!response || response.success === false) {
+            renderGoLiveSummaryError_(response && response.message);
+            return;
+          }
+
+          renderGoLiveSummaryTable_('gl-summary-district-target', response.byDistrict, response.byDistrictGrandTotal, 'DISTRICT');
+          renderGoLiveSummaryTable_('gl-summary-subdistrict-target', response.bySubDistrict, response.bySubDistrictGrandTotal, 'SUB DISTRICT');
+        })
+        .withFailureHandler(function(err) {
+          isFetchingGoLiveSummary = false;
+          console.error('Gagal mengambil rekap Monitoring Go Live:', err.message);
+          renderGoLiveSummaryError_(err.message);
+        })
+        .getMonitoringGoLiveSummary();
+    }
+
+    function renderGoLiveSummaryError_(message) {
+      const errHtml = `<tr><td colspan="25" class="golive-summary-empty" style="color:var(--danger-color);">
+        <i class="fa-solid fa-triangle-exclamation"></i>Gagal memuat rekap: ${escapeHtml(message || 'Terjadi kesalahan.')}
+      </td></tr>`;
+      const a = document.getElementById('gl-summary-district-target');
+      const b = document.getElementById('gl-summary-subdistrict-target');
+      if (a) a.innerHTML = errHtml;
+      if (b) b.innerHTML = errHtml;
+    }
+
+    // isTotal      -> kolom TOTAL (LOP/ODP/PORT), diberi styling total-cell.
+    // withDivider  -> tambahkan garis pemisah grup di kolom PORT (dipakai
+    //                 setelah TOTAL dan setelah KENDALA ABD, sama seperti
+    //                 border di <thead>).
+    function goLiveSummaryMetricCells_(metric, isTotal, withDivider) {
+      const m = metric || { lop: 0, odp: 0, port: 0 };
+      const cls = isTotal ? 'num-cell total-cell' : 'num-cell';
+      const portCls = cls + (withDivider ? ' group-divider' : '');
+      return `
+        <td class="${cls}">${m.lop || 0}</td>
+        <td class="${cls}">${m.odp || 0}</td>
+        <td class="${portCls}">${m.port || 0}</td>`;
+    }
+
+    function goLiveSummaryRowHtml_(row, isGrandTotal) {
+      let bucketCells = '';
+      GOLIVE_SUMMARY_BUCKET_ORDER.forEach(function (key, idx) {
+        // idx 2 = KENDALA ABD -> bucket terakhir grup MITRA, diberi divider.
+        bucketCells += goLiveSummaryMetricCells_(row.buckets && row.buckets[key], false, idx === 2);
+      });
+
+      return `
+        <tr${isGrandTotal ? ' class="pivot-total-row"' : ''}>
+          <td>${escapeHtml(row.label) || '-'}</td>
+          ${goLiveSummaryMetricCells_(row.total, true, true)}
+          ${bucketCells}
+        </tr>`;
+    }
+
+    function renderGoLiveSummaryTable_(tbodyId, rows, grandTotal, labelType) {
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody) return;
+
+      if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="25" class="golive-summary-empty">
+          <i class="fa-solid fa-inbox"></i>Tidak ada data ${escapeHtml(labelType)} dengan NEW STATUS "FI-OGP GO LIVE" / "GO LIVE".
+        </td></tr>`;
+        return;
+      }
+
+      const bodyHtml = rows.map(function (r) { return goLiveSummaryRowHtml_(r, false); }).join('');
+      const totalHtml = grandTotal ? goLiveSummaryRowHtml_(Object.assign({ label: 'GRAND TOTAL' }, grandTotal), true) : '';
+
+      tbody.innerHTML = bodyHtml + totalHtml;
     }
 
     function fetchMonitoringGoLiveData() {

@@ -601,7 +601,7 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 }
 .pivot-table-wrap-full .pivot-grouped-table th.hdr-navy { z-index: 5; }
 .pivot-table-wrap-full .pivot-grouped-table tbody td:first-child { z-index: 3; background: var(--pivot-blue-bg); }
-.pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--pivot-navy-grand); }
+.pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--pivot-blue); }
 /* Petunjuk geser horizontal — 25 kolom tidak akan pernah muat di layar HP,
    jadi user perlu tahu harus scroll ke samping, bukan mengira tabel "putus". */
 .golive-scroll-hint { display: none; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-muted); margin: -4px 0 8px; }
@@ -628,40 +628,29 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .keterangan-pivot-bar-fill { height: 100%; background: var(--accent-color); border-radius: 4px; }
 
 /* ── Rekap Pivot Monitoring Go Live (per DISTRICT / SUB DISTRICT) ──
-   Skema warna: navy (label/District), biru (TOTAL), oranye (MITRA),
-   teal (SDI) — 3 level header (band solid > sub-grup > LOP/ODP/PORT),
-   baris GRAND TOTAL memakai warna lebih gelap per kelompok kolom. */
+   Skema warna PERSIS konsep: HANYA 3 warna solid flat (biru/oranye/teal),
+   dipakai RATA di ketiga level header (band > sub-grup > LOP/ODP/PORT)
+   TANPA gradasi/tint apapun, dan baris GRAND TOTAL memakai warna solid
+   yang SAMA PERSIS dengan header (bukan versi lebih gelap). Tint pucat
+   (blue-bg/orange-bg/teal-bg) hanya dipakai untuk background baris data
+   biasa di body, sesuai konsep. */
 :root {
-  --pivot-navy: #0B2A4A;
-  --pivot-navy-grand: #08213A;
-  --pivot-blue: #2E86DE;
-  --pivot-blue-mid: rgba(46,134,222,0.20);
-  --pivot-blue-bg: rgba(46,134,222,0.08);
-  --pivot-blue-grand: #1F6BB8;
-  --pivot-orange: #F0900F;
-  --pivot-orange-mid: rgba(240,144,15,0.20);
-  --pivot-orange-bg: rgba(240,144,15,0.08);
-  --pivot-orange-grand: #D97A06;
+  --pivot-navy-text: #0B2A4A;
+  --pivot-blue: #1F6BB7;
+  --pivot-blue-bg: rgba(31,107,183,0.08);
+  --pivot-orange: #EF900E;
+  --pivot-orange-bg: rgba(239,144,14,0.08);
   --pivot-teal: #12967F;
-  --pivot-teal-mid: rgba(18,150,127,0.18);
   --pivot-teal-bg: rgba(18,150,127,0.08);
-  --pivot-teal-grand: #0E7A67;
 }
 [data-theme="dark"] {
-  --pivot-navy: #0A2036;
-  --pivot-navy-grand: #061526;
+  --pivot-navy-text: var(--text-title);
   --pivot-blue: #2E86DE;
-  --pivot-blue-mid: rgba(94,168,239,0.22);
-  --pivot-blue-bg: rgba(94,168,239,0.12);
-  --pivot-blue-grand: #1F5C96;
+  --pivot-blue-bg: rgba(94,168,239,0.14);
   --pivot-orange: #F0900F;
-  --pivot-orange-mid: rgba(240,144,15,0.24);
-  --pivot-orange-bg: rgba(240,144,15,0.12);
-  --pivot-orange-grand: #B36A08;
+  --pivot-orange-bg: rgba(240,144,15,0.14);
   --pivot-teal: #17B79B;
-  --pivot-teal-mid: rgba(23,183,155,0.22);
-  --pivot-teal-bg: rgba(23,183,155,0.12);
-  --pivot-teal-grand: #0C6656;
+  --pivot-teal-bg: rgba(23,183,155,0.14);
 }
 
 .golive-summary-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 14px 16px; margin-bottom: 16px; }
@@ -669,39 +658,37 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-summary-title { font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
 .golive-summary-title i { color: var(--accent-color); font-size: 12px; }
 
-/* Header level 1 — DISTRICT/SUB DISTRICT (navy, rowspan 3) & band TOTAL/MITRA/SDI (solid) */
-.pivot-grouped-table thead th.hdr-navy { background: var(--pivot-navy); color: #fff; font-size: 10.5px; vertical-align: middle; }
-.pivot-grouped-table thead th.hdr-navy i { margin-right: 5px; }
+/* Header level 1 — DISTRICT/SUB DISTRICT (rowspan 3) & band TOTAL/MITRA/SDI:
+   SEMUA solid biru (sama persis dengan DISTRICT), tidak ada navy terpisah. */
+.pivot-grouped-table thead th.hdr-navy { background: var(--pivot-blue); color: #fff; font-size: 10.5px; vertical-align: middle; }
 .pivot-grouped-table thead th.hdr-band { color: #fff; font-size: 10.5px; letter-spacing: 0.4px; padding: 7px 4px; }
-.pivot-grouped-table thead th.hdr-band i { margin-right: 6px; }
 .pivot-grouped-table thead th.hdr-band-total { background: var(--pivot-blue); }
 .pivot-grouped-table thead th.hdr-band-mitra { background: var(--pivot-orange); }
 .pivot-grouped-table thead th.hdr-band-sdi   { background: var(--pivot-teal); }
 
-/* Header level 2 — sub-grup nama (CREATE ABD, VALIDATION, dst) & LOP/ODP/PORT milik TOTAL */
-.pivot-grouped-table thead th.hdr-sub-total { background: var(--pivot-blue-mid); color: var(--pivot-blue); }
-.pivot-grouped-table thead th.hdr-sub-mitra { background: var(--pivot-orange-mid); color: var(--pivot-orange-grand); }
-.pivot-grouped-table thead th.hdr-sub-sdi   { background: var(--pivot-teal-mid); color: var(--pivot-teal-grand); }
+/* Header level 2 — sub-grup nama (CREATE ABD, VALIDATION, dst) & LOP/ODP/PORT
+   milik TOTAL: warna SOLID sama dengan band di atasnya (flat, tanpa tint). */
+.pivot-grouped-table thead th.hdr-sub-total { background: var(--pivot-blue); color: #fff; }
+.pivot-grouped-table thead th.hdr-sub-mitra { background: var(--pivot-orange); color: #fff; }
+.pivot-grouped-table thead th.hdr-sub-sdi   { background: var(--pivot-teal); color: #fff; }
 
-/* Header level 3 — LOP/ODP/PORT milik tiap sub-grup MITRA/SDI */
-.pivot-grouped-table thead th.hdr-leaf-mitra { background: var(--pivot-orange-bg); color: var(--pivot-orange-grand); }
-.pivot-grouped-table thead th.hdr-leaf-sdi   { background: var(--pivot-teal-bg); color: var(--pivot-teal-grand); }
+/* Header level 3 — LOP/ODP/PORT milik tiap sub-grup MITRA/SDI: solid, sama warna. */
+.pivot-grouped-table thead th.hdr-leaf-mitra { background: var(--pivot-orange); color: #fff; }
+.pivot-grouped-table thead th.hdr-leaf-sdi   { background: var(--pivot-teal); color: #fff; }
 
-/* Sel data (body) */
+/* Sel data (body) — tint pucat sesuai konsep */
 .pivot-grouped-table td.num-cell { text-align: center !important; font-variant-numeric: tabular-nums; }
-.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--pivot-blue-bg); }
-[data-theme="dark"] .pivot-grouped-table td.label-cell { color: var(--text-title); }
+.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy-text); background: var(--pivot-blue-bg); }
 .pivot-grouped-table td.cell-total { background: var(--pivot-blue-bg); font-weight: 700; }
 .pivot-grouped-table td.cell-mitra { background: var(--pivot-orange-bg); }
 .pivot-grouped-table td.cell-sdi   { background: var(--pivot-teal-bg); }
 
-/* Baris GRAND TOTAL — warna solid lebih gelap per kelompok kolom */
-.pivot-grouped-table tbody tr.pivot-total-row td { font-weight: 800; color: #fff; border-color: rgba(255,255,255,0.18); }
-.pivot-grouped-table tbody tr.pivot-total-row td.label-cell { background: var(--pivot-navy-grand); color: #fff; }
-.pivot-grouped-table tbody tr.pivot-total-row td.label-cell i { margin-right: 5px; }
-.pivot-grouped-table tbody tr.pivot-total-row td.cell-total { background: var(--pivot-blue-grand); }
-.pivot-grouped-table tbody tr.pivot-total-row td.cell-mitra { background: var(--pivot-orange-grand); }
-.pivot-grouped-table tbody tr.pivot-total-row td.cell-sdi   { background: var(--pivot-teal-grand); }
+/* Baris GRAND TOTAL — warna solid SAMA PERSIS dengan header (bukan versi lebih gelap) */
+.pivot-grouped-table tbody tr.pivot-total-row td { font-weight: 800; color: #fff; border-color: rgba(255,255,255,0.35); }
+.pivot-grouped-table tbody tr.pivot-total-row td.label-cell { background: var(--pivot-blue); color: #fff; }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-total { background: var(--pivot-blue); }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-mitra { background: var(--pivot-orange); }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-sdi   { background: var(--pivot-teal); }
 
 .golive-summary-empty { text-align: center; padding: 26px 10px; color: var(--text-muted); font-size: 11.5px; }
 .golive-summary-empty i { font-size: 20px; opacity: .4; display: block; margin-bottom: 8px; }
@@ -712,12 +699,12 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-legend-items { display: flex; gap: 14px; flex-wrap: wrap; flex: 1; }
 .golive-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-main); white-space: nowrap; }
 .golive-legend-swatch { width: 13px; height: 13px; border-radius: 4px; display: inline-block; flex-shrink: 0; }
-.golive-legend-swatch.sw-navy  { background: var(--pivot-navy); }
+.golive-legend-swatch.sw-navy  { background: var(--pivot-blue); }
 .golive-legend-swatch.sw-total { background: var(--pivot-blue); }
 .golive-legend-swatch.sw-mitra { background: var(--pivot-orange); }
 .golive-legend-swatch.sw-sdi   { background: var(--pivot-teal); }
 .golive-legend-swatch.sw-row   { background: var(--pivot-blue-bg); border: 1px solid var(--border-color); }
-.golive-legend-swatch.sw-grand { background: var(--pivot-navy-grand); }
+.golive-legend-swatch.sw-grand { background: var(--pivot-blue); }
 .golive-legend-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
 @media (max-width: 768px) {
   .golive-legend-bar { flex-direction: column; align-items: flex-start; }

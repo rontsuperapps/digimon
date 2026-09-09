@@ -570,12 +570,20 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    ke kolom angka sebelahnya. Pakai lebar otomatis + scroll horizontal
    di semua ukuran layar, dengan kolom label dibuat sticky. */
 .pivot-table-wrap-full { max-height: none; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
-.pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; min-width: 100%; }
+/* Sebelumnya ada "min-width:100%" yang MEMAKSA tabel selebar penuh
+   container, padahal isi aslinya (LOP/ODP/PORT, angka max 6 digit) jauh
+   lebih sempit -- browser lalu "menggelembungkan" tiap kolom supaya
+   memenuhi lebar itu, makanya kolom kelihatan lebar padahal teksnya
+   pendek. Sekarang tabel hanya selebar kontennya sendiri (max-content):
+   kalau total lebar kolom muat di layar, TIDAK ADA scroll horizontal
+   sama sekali; kalau tidak muat (mis. di HP dengan 25 kolom), baru
+   scroll horizontal aktif -- itu batas fisik, bukan bug. */
+.pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; }
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r1 th,
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r2 th,
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r3 th { position: sticky; }
 .pivot-table-wrap-full .pivot-grouped-table th,
-.pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 62px; }
+.pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 46px; }
 /* PENTING: kolom DISTRICT/SUB DISTRICT pakai rowspan="3", jadi th:first-child
    di baris ke-2 & ke-3 <thead> BUKAN kolom identitas itu -- itu sebenarnya
    header LOP/ODP/PORT pertama (numerik). Sebelumnya rule ini salah menembak
@@ -604,7 +612,7 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
   .pivot-grouped-table th { font-size: 8.5px; padding: 4px 3px; }
   .pivot-grouped-table td { padding: 4px 3px; }
   .pivot-table-wrap-full .pivot-grouped-table th,
-  .pivot-table-wrap-full .pivot-grouped-table td { min-width: 50px; }
+  .pivot-table-wrap-full .pivot-grouped-table td { min-width: 42px; }
   .pivot-table-wrap-full .pivot-grouped-table th.hdr-navy,
   .pivot-table-wrap-full .pivot-grouped-table tbody td:first-child { min-width: 118px; max-width: 140px; }
   .golive-scroll-hint { display: flex; }

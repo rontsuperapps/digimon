@@ -547,12 +547,21 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .pivot-grouped-table thead tr:first-child th:first-child,
 .pivot-grouped-table tbody td:first-child { white-space: nowrap; }
 .pivot-grouped-table th { font-size: 8.6px; letter-spacing: 0.15px; padding: 6px 4px; text-align: center !important; word-break: normal; overflow-wrap: normal; hyphens: none; }
-.pivot-grouped-table thead tr:first-child th { position: sticky; top: 0; z-index: 2; text-align: center; }
-.pivot-grouped-table thead tr:last-child th { position: sticky; top: 27px; z-index: 1; }
+/* Sticky header 3 baris: top row2/row3 TIDAK di-hardcode (dulu 27px, patah
+   tiap kali font-size/padding berubah di breakpoint mobile) — dihitung live
+   oleh syncPivotStickyHeaderOffsets_() berdasarkan tinggi asli tiap baris. */
+.pivot-grouped-table thead tr.pivot-hdr-r1 th { position: sticky; top: 0; z-index: 3; text-align: center; }
+.pivot-grouped-table thead tr.pivot-hdr-r2 th { position: sticky; top: 0; z-index: 2; text-align: center; }
+.pivot-grouped-table thead tr.pivot-hdr-r3 th { position: sticky; top: 0; z-index: 1; text-align: center; }
 .pivot-grouped-table .group-divider { border-right: 1px solid var(--border-color); }
 .pivot-grouped-table td.presensi-cell { color: var(--text-muted); background: var(--table-th-bg); }
-.pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { background: var(--table-th-bg); }
-.pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg); }
+/* Zebra-stripe pakai filter (bukan override background) supaya warna kategori
+   kolom (biru=total, oranye=mitra, teal=sdi) tetap kelihatan di baris genap —
+   sebelumnya rule ini menimpa background jadi flat abu-abu dan menghilangkan
+   pewarnaan kategori, itulah sumber tampilan "berantakan" pewarnaan. */
+.pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { filter: brightness(0.97); }
+[data-theme="dark"] .pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { filter: brightness(1.14); }
+.pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg) !important; filter: none; }
 .pivot-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin-top: 8px; }
 /* Variant "full" (rekap Go Live per District/Sub District): kolom sangat
    banyak (25), jadi JANGAN dipaksa table-layout:fixed 100% lebar
@@ -561,22 +570,33 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    di semua ukuran layar, dengan kolom label dibuat sticky. */
 .pivot-table-wrap-full { max-height: none; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
 .pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; min-width: 100%; }
-.pivot-table-wrap-full .pivot-grouped-table thead tr:first-child th,
-.pivot-table-wrap-full .pivot-grouped-table thead tr:last-child th { position: sticky; }
+.pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r1 th,
+.pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r2 th,
+.pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r3 th { position: sticky; }
 .pivot-table-wrap-full .pivot-grouped-table th,
-.pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 56px; }
+.pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 62px; }
 .pivot-table-wrap-full .pivot-grouped-table th:first-child,
-.pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 150px; max-width: 220px; white-space: normal; word-break: break-word; position: sticky; left: 0; z-index: 3; background: var(--card-bg); }
+.pivot-table-wrap-full .pivot-grouped-table td:first-child {
+  min-width: 150px; max-width: 220px; white-space: normal; word-break: break-word;
+  position: sticky; left: 0; z-index: 3; background: var(--table-th-bg);
+  box-shadow: 2px 0 4px rgba(16,24,40,0.08);
+}
 .pivot-table-wrap-full .pivot-grouped-table thead th:first-child { z-index: 5; background: var(--table-th-bg); }
-.pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--sb-active-bg); }
+.pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--pivot-navy-grand); }
+/* Petunjuk geser horizontal — 25 kolom tidak akan pernah muat di layar HP,
+   jadi user perlu tahu harus scroll ke samping, bukan mengira tabel "putus". */
+.golive-scroll-hint { display: none; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-muted); margin: -4px 0 8px; }
+.golive-scroll-hint i { color: var(--accent-color); animation: golive-hint-nudge 1.4s ease-in-out infinite; }
+@keyframes golive-hint-nudge { 0%,100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
 @media (max-width: 768px) {
   .pivot-grouped-table { font-size: 9.5px; }
   .pivot-grouped-table th { font-size: 8.5px; padding: 4px 3px; }
   .pivot-grouped-table td { padding: 4px 3px; }
   .pivot-table-wrap-full .pivot-grouped-table th,
-  .pivot-table-wrap-full .pivot-grouped-table td { min-width: 44px; }
+  .pivot-table-wrap-full .pivot-grouped-table td { min-width: 50px; }
   .pivot-table-wrap-full .pivot-grouped-table th:first-child,
   .pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 118px; max-width: 140px; }
+  .golive-scroll-hint { display: flex; }
 }
 
 
@@ -650,7 +670,7 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 
 /* Sel data (body) */
 .pivot-grouped-table td.num-cell { text-align: center !important; font-variant-numeric: tabular-nums; }
-.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--pivot-blue-bg); }
+.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--table-th-bg); border-right: 2px solid var(--pivot-blue); }
 [data-theme="dark"] .pivot-grouped-table td.label-cell { color: var(--text-title); }
 .pivot-grouped-table td.cell-total { background: var(--pivot-blue-bg); font-weight: 700; }
 .pivot-grouped-table td.cell-mitra { background: var(--pivot-orange-bg); }
@@ -1092,16 +1112,17 @@ tbody tr:hover td { background: var(--table-th-bg); }
         <div class="golive-summary-head">
           <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per District</div>
         </div>
+        <div class="golive-scroll-hint"><i class="fa-solid fa-chevron-right"></i> Geser tabel ke kanan untuk melihat semua kolom</div>
         <div class="pivot-table-wrap pivot-table-wrap-full">
           <table class="pivot-grouped-table" id="glSummaryDistrictTable">
             <thead>
-              <tr>
+              <tr class="pivot-hdr-r1">
                 <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>DISTRICT</th>
                 <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
                 <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
                 <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
               </tr>
-              <tr>
+              <tr class="pivot-hdr-r2">
                 <th rowspan="2" class="hdr-sub-total">LOP</th>
                 <th rowspan="2" class="hdr-sub-total">ODP</th>
                 <th rowspan="2" class="hdr-sub-total group-divider">PORT</th>
@@ -1113,7 +1134,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
                 <th colspan="3" class="hdr-sub-sdi">TERMINATION</th>
                 <th colspan="3" class="hdr-sub-sdi">GO LIVE</th>
               </tr>
-              <tr>
+              <tr class="pivot-hdr-r3">
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra group-divider">PORT</th>
@@ -1137,16 +1158,17 @@ tbody tr:hover td { background: var(--table-th-bg); }
         <div class="golive-summary-head">
           <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per Sub District</div>
         </div>
+        <div class="golive-scroll-hint"><i class="fa-solid fa-chevron-right"></i> Geser tabel ke kanan untuk melihat semua kolom</div>
         <div class="pivot-table-wrap pivot-table-wrap-full">
           <table class="pivot-grouped-table" id="glSummarySubDistrictTable">
             <thead>
-              <tr>
+              <tr class="pivot-hdr-r1">
                 <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>SUB DISTRICT</th>
                 <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
                 <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
                 <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
               </tr>
-              <tr>
+              <tr class="pivot-hdr-r2">
                 <th rowspan="2" class="hdr-sub-total">LOP</th>
                 <th rowspan="2" class="hdr-sub-total">ODP</th>
                 <th rowspan="2" class="hdr-sub-total group-divider">PORT</th>
@@ -1158,7 +1180,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
                 <th colspan="3" class="hdr-sub-sdi">TERMINATION</th>
                 <th colspan="3" class="hdr-sub-sdi">GO LIVE</th>
               </tr>
-              <tr>
+              <tr class="pivot-hdr-r3">
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
                 <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra group-divider">PORT</th>
@@ -2090,6 +2112,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
           renderGoLiveSummaryTable_('gl-summary-district-target', response.byDistrict, response.byDistrictGrandTotal, 'DISTRICT');
           renderGoLiveSummaryTable_('gl-summary-subdistrict-target', response.bySubDistrict, response.bySubDistrictGrandTotal, 'SUB DISTRICT');
+          syncAllPivotStickyHeaders_();
         })
         .withFailureHandler(function(err) {
           isFetchingGoLiveSummary = false;
@@ -2097,6 +2120,46 @@ tbody tr:hover td { background: var(--table-th-bg); }
           renderGoLiveSummaryError_(err.message);
         })
         .getMonitoringGoLiveSummary();
+    }
+
+    // Format angka pakai pemisah ribuan gaya Indonesia (1000 -> "1.000").
+    function formatNum_(n) {
+      const v = Number(n) || 0;
+      return v.toLocaleString('id-ID');
+    }
+
+    // Header pivot 3 baris (band -> sub -> leaf) memakai position:sticky per
+    // baris. Tinggi tiap baris bisa berubah (breakpoint mobile, font Poppins
+    // baru selesai load, tema gelap/terang), jadi "top" row-2 & row-3 TIDAK
+    // boleh di-hardcode — dihitung ulang dari tinggi asli baris di atasnya.
+    // Ini yang memperbaiki header yang dulu tumpang tindih/patah saat discroll.
+    function syncPivotStickyHeaderOffsets_(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const r1 = table.querySelector('.pivot-hdr-r1');
+      const r2 = table.querySelector('.pivot-hdr-r2');
+      const r3 = table.querySelector('.pivot-hdr-r3');
+      if (!r1 || !r2 || !r3) return;
+      const h1 = r1.getBoundingClientRect().height;
+      const h2 = r2.getBoundingClientRect().height;
+      Array.prototype.forEach.call(r2.children, function (th) { th.style.top = h1 + 'px'; });
+      Array.prototype.forEach.call(r3.children, function (th) { th.style.top = (h1 + h2) + 'px'; });
+    }
+
+    function syncAllPivotStickyHeaders_() {
+      // rAF supaya diukur SETELAH browser selesai layout baris yang baru diisi.
+      requestAnimationFrame(function () {
+        syncPivotStickyHeaderOffsets_('glSummaryDistrictTable');
+        syncPivotStickyHeaderOffsets_('glSummarySubDistrictTable');
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      clearTimeout(window.__pivotStickyResizeT);
+      window.__pivotStickyResizeT = setTimeout(syncAllPivotStickyHeaders_, 120);
+    });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncAllPivotStickyHeaders_);
     }
 
     function renderGoLiveSummaryError_(message) {
@@ -2119,9 +2182,9 @@ tbody tr:hover td { background: var(--table-th-bg); }
       const cls = 'num-cell cell-' + group;
       const portCls = cls + (withDivider ? ' group-divider' : '');
       return `
-        <td class="${cls}">${m.lop || 0}</td>
-        <td class="${cls}">${m.odp || 0}</td>
-        <td class="${portCls}">${m.port || 0}</td>`;
+        <td class="${cls}">${formatNum_(m.lop)}</td>
+        <td class="${cls}">${formatNum_(m.odp)}</td>
+        <td class="${portCls}">${formatNum_(m.port)}</td>`;
     }
 
     function goLiveSummaryRowHtml_(row, isGrandTotal) {

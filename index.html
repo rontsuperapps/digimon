@@ -554,23 +554,31 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .pivot-grouped-table tbody tr:not(.pivot-total-row):nth-child(even) td:not(.presensi-cell) { background: var(--table-th-bg); }
 .pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg); }
 .pivot-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin-top: 8px; }
-.pivot-table-wrap-full { max-height: none; overflow-x: hidden; overflow-y: visible; }
+/* Variant "full" (rekap Go Live per District/Sub District): kolom sangat
+   banyak (25), jadi JANGAN dipaksa table-layout:fixed 100% lebar
+   container -- itu yang bikin kolom label kepepet & teks-nya meluber
+   ke kolom angka sebelahnya. Pakai lebar otomatis + scroll horizontal
+   di semua ukuran layar, dengan kolom label dibuat sticky. */
+.pivot-table-wrap-full { max-height: none; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
+.pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; min-width: 100%; }
 .pivot-table-wrap-full .pivot-grouped-table thead tr:first-child th,
-.pivot-table-wrap-full .pivot-grouped-table thead tr:last-child th { position: static; }
+.pivot-table-wrap-full .pivot-grouped-table thead tr:last-child th { position: sticky; }
+.pivot-table-wrap-full .pivot-grouped-table th,
+.pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 56px; }
+.pivot-table-wrap-full .pivot-grouped-table th:first-child,
+.pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 150px; max-width: 220px; white-space: normal; word-break: break-word; position: sticky; left: 0; z-index: 3; background: var(--card-bg); }
+.pivot-table-wrap-full .pivot-grouped-table thead th:first-child { z-index: 5; background: var(--table-th-bg); }
+.pivot-table-wrap-full .pivot-grouped-table tbody tr.pivot-total-row td:first-child { background: var(--sb-active-bg); }
 @media (max-width: 768px) {
   .pivot-grouped-table { font-size: 9.5px; }
   .pivot-grouped-table th { font-size: 8.5px; padding: 4px 3px; }
   .pivot-grouped-table td { padding: 4px 3px; }
-  .pivot-grouped-table thead tr:first-child th:first-child,
-  .pivot-grouped-table tbody td:first-child { white-space: normal; word-break: normal; }
-  .pivot-table-wrap-full { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; min-width: 100%; }
   .pivot-table-wrap-full .pivot-grouped-table th,
-  .pivot-table-wrap-full .pivot-grouped-table td { white-space: nowrap; min-width: 42px; }
+  .pivot-table-wrap-full .pivot-grouped-table td { min-width: 44px; }
   .pivot-table-wrap-full .pivot-grouped-table th:first-child,
-  .pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 132px; white-space: nowrap; position: sticky; left: 0; z-index: 3; background: var(--card-bg); }
-  .pivot-table-wrap-full .pivot-grouped-table thead th:first-child { z-index: 4; background: var(--table-th-bg); }
+  .pivot-table-wrap-full .pivot-grouped-table td:first-child { min-width: 118px; max-width: 140px; }
 }
+
 
 .keterangan-pivot-list { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; padding-right: 4px; }
 .keterangan-pivot-item { font-size: 11px; }

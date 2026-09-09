@@ -588,26 +588,102 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .keterangan-pivot-bar-track { background: var(--table-th-bg); border-radius: 4px; height: 5px; overflow: hidden; }
 .keterangan-pivot-bar-fill { height: 100%; background: var(--accent-color); border-radius: 4px; }
 
-/* ── Rekap Pivot Monitoring Go Live (per DISTRICT / SUB DISTRICT) ── */
+/* ── Rekap Pivot Monitoring Go Live (per DISTRICT / SUB DISTRICT) ──
+   Skema warna: navy (label/District), biru (TOTAL), oranye (MITRA),
+   teal (SDI) — 3 level header (band solid > sub-grup > LOP/ODP/PORT),
+   baris GRAND TOTAL memakai warna lebih gelap per kelompok kolom. */
+:root {
+  --pivot-navy: #0B2A4A;
+  --pivot-navy-grand: #08213A;
+  --pivot-blue: #2E86DE;
+  --pivot-blue-mid: rgba(46,134,222,0.20);
+  --pivot-blue-bg: rgba(46,134,222,0.08);
+  --pivot-blue-grand: #1F6BB8;
+  --pivot-orange: #F0900F;
+  --pivot-orange-mid: rgba(240,144,15,0.20);
+  --pivot-orange-bg: rgba(240,144,15,0.08);
+  --pivot-orange-grand: #D97A06;
+  --pivot-teal: #12967F;
+  --pivot-teal-mid: rgba(18,150,127,0.18);
+  --pivot-teal-bg: rgba(18,150,127,0.08);
+  --pivot-teal-grand: #0E7A67;
+}
+[data-theme="dark"] {
+  --pivot-navy: #0A2036;
+  --pivot-navy-grand: #061526;
+  --pivot-blue: #2E86DE;
+  --pivot-blue-mid: rgba(94,168,239,0.22);
+  --pivot-blue-bg: rgba(94,168,239,0.12);
+  --pivot-blue-grand: #1F5C96;
+  --pivot-orange: #F0900F;
+  --pivot-orange-mid: rgba(240,144,15,0.24);
+  --pivot-orange-bg: rgba(240,144,15,0.12);
+  --pivot-orange-grand: #B36A08;
+  --pivot-teal: #17B79B;
+  --pivot-teal-mid: rgba(23,183,155,0.22);
+  --pivot-teal-bg: rgba(23,183,155,0.12);
+  --pivot-teal-grand: #0C6656;
+}
+
 .golive-summary-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 14px 16px; margin-bottom: 16px; }
-.golive-summary-card + .golive-summary-card { margin-top: 0; }
 .golive-summary-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .golive-summary-title { font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
 .golive-summary-title i { color: var(--accent-color); font-size: 12px; }
-.golive-summary-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-muted); flex-wrap: wrap; }
-.golive-summary-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.golive-summary-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
-.golive-summary-legend .dot-mitra { background: var(--accent-color); }
-.golive-summary-legend .dot-sdi { background: var(--accent-cyan); }
-.pivot-grouped-table thead th.hdr-mitra { background: var(--accent-glow); color: var(--accent-color-hover); }
-.pivot-grouped-table thead th.hdr-sdi { background: var(--accent-cyan-bg); color: var(--accent-cyan); }
-.pivot-grouped-table thead th.hdr-total { background: var(--table-th-bg); }
+
+/* Header level 1 — DISTRICT/SUB DISTRICT (navy, rowspan 3) & band TOTAL/MITRA/SDI (solid) */
+.pivot-grouped-table thead th.hdr-navy { background: var(--pivot-navy); color: #fff; font-size: 10.5px; vertical-align: middle; }
+.pivot-grouped-table thead th.hdr-navy i { margin-right: 5px; }
+.pivot-grouped-table thead th.hdr-band { color: #fff; font-size: 10.5px; letter-spacing: 0.4px; padding: 7px 4px; }
+.pivot-grouped-table thead th.hdr-band i { margin-right: 6px; }
+.pivot-grouped-table thead th.hdr-band-total { background: var(--pivot-blue); }
+.pivot-grouped-table thead th.hdr-band-mitra { background: var(--pivot-orange); }
+.pivot-grouped-table thead th.hdr-band-sdi   { background: var(--pivot-teal); }
+
+/* Header level 2 — sub-grup nama (CREATE ABD, VALIDATION, dst) & LOP/ODP/PORT milik TOTAL */
+.pivot-grouped-table thead th.hdr-sub-total { background: var(--pivot-blue-mid); color: var(--pivot-blue); }
+.pivot-grouped-table thead th.hdr-sub-mitra { background: var(--pivot-orange-mid); color: var(--pivot-orange-grand); }
+.pivot-grouped-table thead th.hdr-sub-sdi   { background: var(--pivot-teal-mid); color: var(--pivot-teal-grand); }
+
+/* Header level 3 — LOP/ODP/PORT milik tiap sub-grup MITRA/SDI */
+.pivot-grouped-table thead th.hdr-leaf-mitra { background: var(--pivot-orange-bg); color: var(--pivot-orange-grand); }
+.pivot-grouped-table thead th.hdr-leaf-sdi   { background: var(--pivot-teal-bg); color: var(--pivot-teal-grand); }
+
+/* Sel data (body) */
 .pivot-grouped-table td.num-cell { text-align: center !important; font-variant-numeric: tabular-nums; }
-.pivot-grouped-table td.num-cell.total-cell { font-weight: 700; background: var(--table-th-bg); }
-.pivot-grouped-table tbody tr.pivot-total-row td { background: var(--sb-active-bg); font-weight: 800; color: var(--text-title); }
-.pivot-grouped-table tbody tr.pivot-total-row td.total-cell { background: var(--accent-glow); }
+.pivot-grouped-table td.label-cell { font-weight: 700; color: var(--pivot-navy); background: var(--pivot-blue-bg); }
+[data-theme="dark"] .pivot-grouped-table td.label-cell { color: var(--text-title); }
+.pivot-grouped-table td.cell-total { background: var(--pivot-blue-bg); font-weight: 700; }
+.pivot-grouped-table td.cell-mitra { background: var(--pivot-orange-bg); }
+.pivot-grouped-table td.cell-sdi   { background: var(--pivot-teal-bg); }
+
+/* Baris GRAND TOTAL — warna solid lebih gelap per kelompok kolom */
+.pivot-grouped-table tbody tr.pivot-total-row td { font-weight: 800; color: #fff; border-color: rgba(255,255,255,0.18); }
+.pivot-grouped-table tbody tr.pivot-total-row td.label-cell { background: var(--pivot-navy-grand); color: #fff; }
+.pivot-grouped-table tbody tr.pivot-total-row td.label-cell i { margin-right: 5px; }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-total { background: var(--pivot-blue-grand); }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-mitra { background: var(--pivot-orange-grand); }
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-sdi   { background: var(--pivot-teal-grand); }
+
 .golive-summary-empty { text-align: center; padding: 26px 10px; color: var(--text-muted); font-size: 11.5px; }
 .golive-summary-empty i { font-size: 20px; opacity: .4; display: block; margin-bottom: 8px; }
+
+/* Legend warna di bawah tabel */
+.golive-legend-bar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--table-th-bg); border: 1px solid var(--border-color); }
+.golive-legend-title { font-size: 11px; font-weight: 700; color: var(--text-title); white-space: nowrap; }
+.golive-legend-items { display: flex; gap: 14px; flex-wrap: wrap; flex: 1; }
+.golive-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-main); white-space: nowrap; }
+.golive-legend-swatch { width: 13px; height: 13px; border-radius: 4px; display: inline-block; flex-shrink: 0; }
+.golive-legend-swatch.sw-navy  { background: var(--pivot-navy); }
+.golive-legend-swatch.sw-total { background: var(--pivot-blue); }
+.golive-legend-swatch.sw-mitra { background: var(--pivot-orange); }
+.golive-legend-swatch.sw-sdi   { background: var(--pivot-teal); }
+.golive-legend-swatch.sw-row   { background: var(--pivot-blue-bg); border: 1px solid var(--border-color); }
+.golive-legend-swatch.sw-grand { background: var(--pivot-navy-grand); }
+.golive-legend-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; white-space: nowrap; }
+@media (max-width: 768px) {
+  .golive-legend-bar { flex-direction: column; align-items: flex-start; }
+  .golive-legend-note { white-space: normal; }
+}
 
 .chart-box { background: var(--card-bg); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); }
 .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-title); text-align: left; }
@@ -1015,34 +1091,36 @@ tbody tr:hover td { background: var(--table-th-bg); }
       <div class="golive-summary-card">
         <div class="golive-summary-head">
           <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per District</div>
-          <div class="golive-summary-legend">
-            <span><i class="dot-mitra"></i> MITRA</span>
-            <span><i class="dot-sdi"></i> SDI</span>
-          </div>
         </div>
         <div class="pivot-table-wrap pivot-table-wrap-full">
           <table class="pivot-grouped-table" id="glSummaryDistrictTable">
             <thead>
               <tr>
-                <th rowspan="2">DISTRICT</th>
-                <th colspan="3" class="hdr-total group-divider">TOTAL</th>
-                <th colspan="3" class="hdr-mitra">CREATE ABD</th>
-                <th colspan="3" class="hdr-mitra">REVISION ABD</th>
-                <th colspan="3" class="hdr-mitra group-divider">KENDALA ABD</th>
-                <th colspan="3" class="hdr-sdi">VALIDATION</th>
-                <th colspan="3" class="hdr-sdi">DRAWING</th>
-                <th colspan="3" class="hdr-sdi">TERMINATION</th>
-                <th colspan="3" class="hdr-sdi">GO LIVE</th>
+                <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>DISTRICT</th>
+                <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
+                <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
+                <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
               </tr>
               <tr>
-                <th class="hdr-total">LOP</th><th class="hdr-total">ODP</th><th class="hdr-total group-divider">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra group-divider">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th rowspan="2" class="hdr-sub-total">LOP</th>
+                <th rowspan="2" class="hdr-sub-total">ODP</th>
+                <th rowspan="2" class="hdr-sub-total group-divider">PORT</th>
+                <th colspan="3" class="hdr-sub-mitra">CREATE ABD</th>
+                <th colspan="3" class="hdr-sub-mitra">REVISION ABD</th>
+                <th colspan="3" class="hdr-sub-mitra group-divider">KENDALA ABD</th>
+                <th colspan="3" class="hdr-sub-sdi">VALIDATION</th>
+                <th colspan="3" class="hdr-sub-sdi">DRAWING</th>
+                <th colspan="3" class="hdr-sub-sdi">TERMINATION</th>
+                <th colspan="3" class="hdr-sub-sdi">GO LIVE</th>
+              </tr>
+              <tr>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra group-divider">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
               </tr>
             </thead>
             <tbody id="gl-summary-district-target">
@@ -1050,7 +1128,6 @@ tbody tr:hover td { background: var(--table-th-bg); }
             </tbody>
           </table>
         </div>
-        <div class="pivot-note">Data dihitung hanya dari baris dengan NEW STATUS = "FI-OGP GO LIVE" atau "GO LIVE".</div>
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
@@ -1059,34 +1136,36 @@ tbody tr:hover td { background: var(--table-th-bg); }
       <div class="golive-summary-card">
         <div class="golive-summary-head">
           <div class="golive-summary-title"><i class="fa-solid fa-table-cells"></i> Rekap Go Live — Per Sub District</div>
-          <div class="golive-summary-legend">
-            <span><i class="dot-mitra"></i> MITRA</span>
-            <span><i class="dot-sdi"></i> SDI</span>
-          </div>
         </div>
         <div class="pivot-table-wrap pivot-table-wrap-full">
           <table class="pivot-grouped-table" id="glSummarySubDistrictTable">
             <thead>
               <tr>
-                <th rowspan="2">SUB DISTRICT</th>
-                <th colspan="3" class="hdr-total group-divider">TOTAL</th>
-                <th colspan="3" class="hdr-mitra">CREATE ABD</th>
-                <th colspan="3" class="hdr-mitra">REVISION ABD</th>
-                <th colspan="3" class="hdr-mitra group-divider">KENDALA ABD</th>
-                <th colspan="3" class="hdr-sdi">VALIDATION</th>
-                <th colspan="3" class="hdr-sdi">DRAWING</th>
-                <th colspan="3" class="hdr-sdi">TERMINATION</th>
-                <th colspan="3" class="hdr-sdi">GO LIVE</th>
+                <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>SUB DISTRICT</th>
+                <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
+                <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
+                <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
               </tr>
               <tr>
-                <th class="hdr-total">LOP</th><th class="hdr-total">ODP</th><th class="hdr-total group-divider">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra">PORT</th>
-                <th class="hdr-mitra">LOP</th><th class="hdr-mitra">ODP</th><th class="hdr-mitra group-divider">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
-                <th class="hdr-sdi">LOP</th><th class="hdr-sdi">ODP</th><th class="hdr-sdi">PORT</th>
+                <th rowspan="2" class="hdr-sub-total">LOP</th>
+                <th rowspan="2" class="hdr-sub-total">ODP</th>
+                <th rowspan="2" class="hdr-sub-total group-divider">PORT</th>
+                <th colspan="3" class="hdr-sub-mitra">CREATE ABD</th>
+                <th colspan="3" class="hdr-sub-mitra">REVISION ABD</th>
+                <th colspan="3" class="hdr-sub-mitra group-divider">KENDALA ABD</th>
+                <th colspan="3" class="hdr-sub-sdi">VALIDATION</th>
+                <th colspan="3" class="hdr-sub-sdi">DRAWING</th>
+                <th colspan="3" class="hdr-sub-sdi">TERMINATION</th>
+                <th colspan="3" class="hdr-sub-sdi">GO LIVE</th>
+              </tr>
+              <tr>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra">PORT</th>
+                <th class="hdr-leaf-mitra">LOP</th><th class="hdr-leaf-mitra">ODP</th><th class="hdr-leaf-mitra group-divider">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
+                <th class="hdr-leaf-sdi">LOP</th><th class="hdr-leaf-sdi">ODP</th><th class="hdr-leaf-sdi">PORT</th>
               </tr>
             </thead>
             <tbody id="gl-summary-subdistrict-target">
@@ -1094,7 +1173,20 @@ tbody tr:hover td { background: var(--table-th-bg); }
             </tbody>
           </table>
         </div>
-        <div class="pivot-note">Data dihitung hanya dari baris dengan NEW STATUS = "FI-OGP GO LIVE" atau "GO LIVE".</div>
+      </div>
+
+      <!-- Legend warna bersama untuk kedua tabel rekap di atas -->
+      <div class="golive-legend-bar">
+        <span class="golive-legend-title"><i class="fa-solid fa-palette"></i> Keterangan Warna:</span>
+        <div class="golive-legend-items">
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-navy"></i>District / Sub District</span>
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-total"></i>Total</span>
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-mitra"></i>Mitra - Create/Revisi/Kendala ABD</span>
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-sdi"></i>SDI - Validation/Drawing/Termination/Go Live</span>
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-row"></i>Data Row (isi angka)</span>
+          <span class="golive-legend-item"><i class="golive-legend-swatch sw-grand"></i>Grand Total</span>
+        </div>
+        <span class="golive-legend-note"><i class="fa-solid fa-circle-info"></i> Dihitung dari baris NEW STATUS = "FI-OGP GO LIVE" / "GO LIVE"</span>
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
@@ -1409,6 +1501,8 @@ tbody tr:hover td { background: var(--table-th-bg); }
       'createAbd', 'revisionAbd', 'kendalaAbd',
       'validation', 'drawing', 'termination', 'goLive'
     ];
+    // 3 bucket pertama = grup warna MITRA (oranye), 4 sisanya = grup SDI (teal).
+    const GOLIVE_SUMMARY_MITRA_BUCKET_COUNT = 3;
 
     // PWA — daftarkan service worker (app-shell cache untuk mode offline).
     if ('serviceWorker' in navigator) {
@@ -2015,13 +2109,14 @@ tbody tr:hover td { background: var(--table-th-bg); }
       if (b) b.innerHTML = errHtml;
     }
 
-    // isTotal      -> kolom TOTAL (LOP/ODP/PORT), diberi styling total-cell.
+    // group        -> 'total' | 'mitra' | 'sdi', menentukan warna sel (lihat CSS
+    //                 .cell-total/.cell-mitra/.cell-sdi & versi *-grand di grand total row).
     // withDivider  -> tambahkan garis pemisah grup di kolom PORT (dipakai
     //                 setelah TOTAL dan setelah KENDALA ABD, sama seperti
     //                 border di <thead>).
-    function goLiveSummaryMetricCells_(metric, isTotal, withDivider) {
+    function goLiveSummaryMetricCells_(metric, group, withDivider) {
       const m = metric || { lop: 0, odp: 0, port: 0 };
-      const cls = isTotal ? 'num-cell total-cell' : 'num-cell';
+      const cls = 'num-cell cell-' + group;
       const portCls = cls + (withDivider ? ' group-divider' : '');
       return `
         <td class="${cls}">${m.lop || 0}</td>
@@ -2032,14 +2127,19 @@ tbody tr:hover td { background: var(--table-th-bg); }
     function goLiveSummaryRowHtml_(row, isGrandTotal) {
       let bucketCells = '';
       GOLIVE_SUMMARY_BUCKET_ORDER.forEach(function (key, idx) {
+        const group = (idx < GOLIVE_SUMMARY_MITRA_BUCKET_COUNT) ? 'mitra' : 'sdi';
         // idx 2 = KENDALA ABD -> bucket terakhir grup MITRA, diberi divider.
-        bucketCells += goLiveSummaryMetricCells_(row.buckets && row.buckets[key], false, idx === 2);
+        bucketCells += goLiveSummaryMetricCells_(row.buckets && row.buckets[key], group, idx === 2);
       });
+
+      const labelHtml = isGrandTotal
+        ? `<i class="fa-solid fa-calculator" style="margin-right:5px;"></i>${escapeHtml(row.label) || '-'}`
+        : (escapeHtml(row.label) || '-');
 
       return `
         <tr${isGrandTotal ? ' class="pivot-total-row"' : ''}>
-          <td>${escapeHtml(row.label) || '-'}</td>
-          ${goLiveSummaryMetricCells_(row.total, true, true)}
+          <td class="label-cell">${labelHtml}</td>
+          ${goLiveSummaryMetricCells_(row.total, 'total', true)}
           ${bucketCells}
         </tr>`;
     }

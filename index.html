@@ -1136,10 +1136,10 @@ tbody tr:hover td { background: var(--table-th-bg); }
           <table class="pivot-grouped-table" id="glSummaryDistrictTable">
             <thead>
               <tr class="pivot-hdr-r1">
-                <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>DISTRICT</th>
-                <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
-                <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
-                <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
+                <th rowspan="3" class="hdr-navy">DISTRICT</th>
+                <th colspan="3" class="hdr-band hdr-band-total">TOTAL ORDER</th>
+                <th colspan="9" class="hdr-band hdr-band-mitra">MITRA</th>
+                <th colspan="12" class="hdr-band hdr-band-sdi">SDI</th>
               </tr>
               <tr class="pivot-hdr-r2">
                 <th rowspan="2" class="hdr-sub-total">LOP</th>
@@ -1182,10 +1182,10 @@ tbody tr:hover td { background: var(--table-th-bg); }
           <table class="pivot-grouped-table" id="glSummarySubDistrictTable">
             <thead>
               <tr class="pivot-hdr-r1">
-                <th rowspan="3" class="hdr-navy"><i class="fa-solid fa-location-dot"></i>SUB DISTRICT</th>
-                <th colspan="3" class="hdr-band hdr-band-total"><i class="fa-solid fa-layer-group"></i>TOTAL</th>
-                <th colspan="9" class="hdr-band hdr-band-mitra"><i class="fa-solid fa-users"></i>MITRA</th>
-                <th colspan="12" class="hdr-band hdr-band-sdi"><i class="fa-solid fa-gear"></i>SDI</th>
+                <th rowspan="3" class="hdr-navy">SUB DISTRICT</th>
+                <th colspan="3" class="hdr-band hdr-band-total">TOTAL ORDER</th>
+                <th colspan="9" class="hdr-band hdr-band-mitra">MITRA</th>
+                <th colspan="12" class="hdr-band hdr-band-sdi">SDI</th>
               </tr>
               <tr class="pivot-hdr-r2">
                 <th rowspan="2" class="hdr-sub-total">LOP</th>
@@ -2214,9 +2214,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
         bucketCells += goLiveSummaryMetricCells_(row.buckets && row.buckets[key], group, idx === 2);
       });
 
-      const labelHtml = isGrandTotal
-        ? `<i class="fa-solid fa-calculator" style="margin-right:5px;"></i>${escapeHtml(row.label) || '-'}`
-        : (escapeHtml(row.label) || '-');
+      const labelHtml = escapeHtml(row.label) || '-';
 
       return `
         <tr${isGrandTotal ? ' class="pivot-total-row"' : ''}>

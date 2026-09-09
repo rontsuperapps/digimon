@@ -564,21 +564,18 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    bikin warnanya keliatan belang/tidak konsisten. Highlight cukup pakai hover. */
 .pivot-grouped-table tbody tr:not(.pivot-total-row):hover td:not(.presensi-cell) { background: var(--sb-active-bg) !important; }
 .pivot-note { font-size: 10.5px; color: var(--text-muted); font-style: italic; margin-top: 8px; }
-/* Variant "full" (rekap Go Live per District/Sub District): kolom sangat
-   banyak (25), jadi JANGAN dipaksa table-layout:fixed 100% lebar
-   container -- itu yang bikin kolom label kepepet & teks-nya meluber
-   ke kolom angka sebelahnya. Pakai lebar otomatis + scroll horizontal
-   di semua ukuran layar, dengan kolom label dibuat sticky. */
+/* Variant "full" (rekap Go Live per District/Sub District): kolom cukup
+   banyak (25), tapi supaya TIDAK ADA ruang kosong di sisi kanan card saat
+   layar lebar (dan TIDAK ADA scroll horizontal kalau muat), tabel dibuat
+   width:100% (mengisi penuh lebar card) dengan table-layout:auto -- browser
+   akan mendistribusikan sisa lebar secara proporsional ke tiap kolom
+   berdasar kontennya (bukan dipaksa rata sama rata seperti table-layout:
+   fixed, yang dulu bikin kolom label kepepet & teks meluber). overflow-x:
+   auto pada wrapper tetap dipertahankan sebagai fallback -- HANYA aktif
+   kalau total lebar minimum kolom (lihat min-width di bawah) benar-benar
+   tidak muat di layar (mis. HP sangat sempit), bukan kondisi umum. */
 .pivot-table-wrap-full { max-height: none; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
-/* Sebelumnya ada "min-width:100%" yang MEMAKSA tabel selebar penuh
-   container, padahal isi aslinya (LOP/ODP/PORT, angka max 6 digit) jauh
-   lebih sempit -- browser lalu "menggelembungkan" tiap kolom supaya
-   memenuhi lebar itu, makanya kolom kelihatan lebar padahal teksnya
-   pendek. Sekarang tabel hanya selebar kontennya sendiri (max-content):
-   kalau total lebar kolom muat di layar, TIDAK ADA scroll horizontal
-   sama sekali; kalau tidak muat (mis. di HP dengan 25 kolom), baru
-   scroll horizontal aktif -- itu batas fisik, bukan bug. */
-.pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: max-content; }
+.pivot-table-wrap-full .pivot-grouped-table { table-layout: auto; width: 100%; }
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r1 th,
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r2 th,
 .pivot-table-wrap-full .pivot-grouped-table thead tr.pivot-hdr-r3 th { position: sticky; }

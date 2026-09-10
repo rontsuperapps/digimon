@@ -749,6 +749,11 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .pivot-grouped-table td.cell-total { background: var(--pivot-blue-bg); font-weight: 700; }
 .pivot-grouped-table td.cell-mitra { background: var(--pivot-orange-bg); }
 .pivot-grouped-table td.cell-sdi   { background: var(--pivot-teal-bg); }
+/* Kolom TANGGAL pada tabel "Perolehan Go Live Harian" -- tint sama dengan
+   kolom TOTAL (satu-satunya kategori di tabel ini) TAPI tidak bold, supaya
+   seluruh baris terlihat menyatu (bukan cuma 2 kolom pertama berwarna lalu
+   sisanya putih polos -- itulah sumber tampilan "belang-belang"). */
+.pivot-grouped-table td.cell-date { background: var(--pivot-blue-bg); }
 
 /* Baris GRAND TOTAL — warna solid SAMA PERSIS dengan header (bukan versi lebih gelap) */
 .pivot-grouped-table tbody tr.pivot-total-row td { font-weight: 800; color: #fff; border-color: rgba(255,255,255,0.35); }
@@ -756,6 +761,12 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .pivot-grouped-table tbody tr.pivot-total-row td.cell-total { background: var(--pivot-blue); }
 .pivot-grouped-table tbody tr.pivot-total-row td.cell-mitra { background: var(--pivot-orange); }
 .pivot-grouped-table tbody tr.pivot-total-row td.cell-sdi   { background: var(--pivot-teal); }
+/* Baris GRAND TOTAL: kolom TANGGAL sebelumnya cuma dapat class "num-cell"
+   (tanpa background apa pun), padahal aturan di atas sudah memaksa teksnya
+   putih (tr.pivot-total-row td { color:#fff }) -- hasilnya angka putih di
+   atas latar putih/transparan alias "kosong". Disamakan solid var(--pivot-blue)
+   seperti kolom TOTAL supaya teks putihnya kebaca. */
+.pivot-grouped-table tbody tr.pivot-total-row td.cell-date { background: var(--pivot-blue); }
 
 .golive-summary-empty { text-align: center; padding: 26px 10px; color: var(--text-muted); font-size: 11.5px; }
 .golive-summary-empty i { font-size: 20px; opacity: .4; display: block; margin-bottom: 8px; }
@@ -2559,7 +2570,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       let tds = `<td class="label-cell">${escapeHtml(rowLabel)}</td>`;
       tds += `<td class="num-cell cell-total">${formatNum_(total)}</td>`;
       dateKeys.forEach(function (k) {
-        tds += `<td class="num-cell">${formatNum_((byDate && byDate[k]) || 0)}</td>`;
+        tds += `<td class="num-cell cell-date">${formatNum_((byDate && byDate[k]) || 0)}</td>`;
       });
       return `<tr${rowClass}>${tds}</tr>`;
     }

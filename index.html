@@ -95,15 +95,21 @@
 
 /* ================================================================
    TEMA — mengikuti struktur desain TailAdmin (flat/solid, border
-   tipis, shadow lembut, radius besar), palet warna diambil dari
-   identitas brand IndiHome/TelkomAkses & Telkomsel (wallpaper
-   Technician Replacement ONT Fiber Optic): merah brand (#ED1C24)
-   sebagai accent utama (tombol, highlight menu aktif, fokus),
-   navy gelap (#07192F) untuk dark mode, dan biru langit (#2E86DE)
-   dipakai sebagai accent sekunder/cyan (highlight pelengkap, status
-   "Open", ikon info). Satu sumber warna: variabel di :root (light)
-   dan [data-theme="dark"]. Semua komponen pakai variabel ini —
-   tidak ada blok "override" terpisah, supaya CSS tidak tumpuk/dobel.
+   tipis, shadow lembut, radius besar), palet warna diambil PERSIS
+   dari sampling piksel logo INFRANEXIA (by Telkom Indonesia): biru
+   navy dari mark "N" pada logo (#2C3979, ujung gelap dari gradasi
+   #2C3979 → #51A0D4) dipakai sebagai accent UTAMA (tombol aksi
+   primer/simpan, highlight menu aktif, fokus input) — BUKAN warna
+   merah brand lagi. Warna merah (--danger-color) tetap dipakai
+   TERPISAH khusus untuk aksi destruktif (logout, hapus), supaya
+   warna tombol selalu sesuai fungsinya: accent = aksi utama/navigasi,
+   danger = aksi merusak/logout, success = konfirmasi berhasil,
+   pending = peringatan, abu-abu = batal/netral. Navy gelap (#07192F)
+   tetap dipakai untuk dark mode, dan biru medium (#3D68A4) sebagai
+   accent sekunder (highlight pelengkap, status "Open", ikon info).
+   Satu sumber warna: variabel di :root (light) dan [data-theme=
+   "dark"]. Semua komponen pakai variabel ini — tidak ada blok
+   "override" terpisah, supaya CSS tidak tumpuk/dobel.
 ================================================================ */
 :root {
   --bg-main: #F9FAFB;
@@ -116,12 +122,12 @@
   --text-muted: #98A2B3;
   --sb-text: #344054;
   --sb-text-muted: #98A2B3;
-  --sb-active-bg: #FCEAEB;
-  --accent-color: #ED1C24;
-  --accent-color-hover: #C6151C;
-  --accent-glow: rgba(237,28,36,0.22);
-  --accent-cyan: #2E86DE;
-  --accent-cyan-bg: rgba(46,134,222,0.12);
+  --sb-active-bg: #F2F3F7;
+  --accent-color: #2C3979;
+  --accent-color-hover: #212C5E;
+  --accent-glow: rgba(44,57,121,0.22);
+  --accent-cyan: #3D68A4;
+  --accent-cyan-bg: rgba(61,104,164,0.12);
   --success-color: #12B76A;
   --danger-color: #F04438;
   --pending-color: #F79009;
@@ -141,12 +147,12 @@
   --text-muted: #98A2B3;
   --sb-text: #F9FAFB;
   --sb-text-muted: #98A2B3;
-  --sb-active-bg: rgba(237,28,36,0.16);
-  --accent-color: #ED1C24;
-  --accent-color-hover: #FF4B52;
-  --accent-glow: rgba(237,28,36,0.35);
-  --accent-cyan: #5EA8EF;
-  --accent-cyan-bg: rgba(94,168,239,0.15);
+  --sb-active-bg: rgba(81,160,212,0.16);
+  --accent-color: #4E76C7;
+  --accent-color-hover: #6C90D8;
+  --accent-glow: rgba(78,118,199,0.35);
+  --accent-cyan: #6FA8D8;
+  --accent-cyan-bg: rgba(111,168,216,0.15);
   --success-color: #12B76A;
   --danger-color: #F97066;
   --pending-color: #F79009;

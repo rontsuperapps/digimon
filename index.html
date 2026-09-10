@@ -708,10 +708,10 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-daily-filter { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .golive-daily-filter-field { display: flex; flex-direction: column; gap: 4px; }
 .golive-daily-filter-field label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); }
-.golive-daily-filter-field input[type="date"] {
+.golive-daily-filter-field select {
   background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px;
   color: var(--text-title); font-family: 'Poppins', sans-serif; font-size: 11.5px;
-  padding: 7px 8px; outline: none;
+  padding: 7px 10px; outline: none; cursor: pointer; min-width: 130px;
 }
 .golive-daily-filter-btn {
   background: var(--accent-color); color: #fff; border: 1px solid var(--accent-color);
@@ -1298,17 +1298,17 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
         <div class="golive-daily-filter">
           <div class="golive-daily-filter-field">
-            <label for="glDailyStartDate">Dari Tanggal</label>
-            <input type="date" id="glDailyStartDate">
+            <label for="glDailyMonthSelect">Bulan</label>
+            <select id="glDailyMonthSelect"></select>
           </div>
           <div class="golive-daily-filter-field">
-            <label for="glDailyEndDate">Sampai Tanggal</label>
-            <input type="date" id="glDailyEndDate">
+            <label for="glDailyYearSelect">Tahun</label>
+            <select id="glDailyYearSelect"></select>
           </div>
           <button type="button" class="golive-daily-filter-btn" onclick="applyGoLiveDailyFilter()">
             <i class="fa-solid fa-filter"></i> Terapkan
           </button>
-          <div class="golive-daily-filter-hint">Nilai yang ditampilkan = PORT REAL untuk baris berstatus GO LIVE, dikelompokkan per tanggal GO LIVE. Rentang maksimal 92 hari.</div>
+          <div class="golive-daily-filter-hint">Nilai yang ditampilkan = PORT REAL untuk baris berstatus GO LIVE, dikelompokkan per tanggal GO LIVE pada bulan & tahun yang dipilih.</div>
         </div>
 
         <div class="golive-daily-subtitle">Rekap Per District</div>
@@ -2026,7 +2026,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
         if (!monitoringGoLiveLoadedOnce) fetchMonitoringGoLiveData();
         if (!goLiveSummaryLoadedOnce) fetchGoLiveSummary();
         if (!goLiveRunRateLoadedOnce) fetchGoLiveRunRate();
-        if (!goLiveDailyLoadedOnce) { ensureGoLiveDailyDefaultDates_(); fetchGoLiveDaily(); }
+        if (!goLiveDailyLoadedOnce) { ensureGoLiveDailyFilterOptions_(); fetchGoLiveDaily(); }
       } else {
         document.getElementById('page-monitoring-project').classList.add('active-page');
         syncSidebarActiveState('nav-monitoring-project');
@@ -2461,44 +2461,60 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
     // ══════════════════════════════════════════════════════════════
     // ── BARIS 4: PEROLEHAN GO LIVE HARIAN (PORT REAL) + FILTER
-    //    RANGE TANGGAL ──
-    // Request ke getMonitoringGoLiveDailyPortReal(startDate, endDate).
-    // Tabel dibangun dinamis lewat JS karena jumlah kolom tanggal
-    // mengikuti rentang yang dipilih user, style reuse pivot-grouped-
-    // table yang sudah ada (konsisten dengan rekap District/Sub
-    // District di atas).
+    //    DROPDOWN BULAN & TAHUN ──
+    // Request ke getMonitoringGoLiveDailyPortReal(year, month). Tabel
+    // dibangun dinamis lewat JS (jumlah kolom tanggal = jumlah hari
+    // dalam bulan yang dipilih), style reuse pivot-grouped-table yang
+    // sudah ada (konsisten dengan rekap District/Sub District).
     // ══════════════════════════════════════════════════════════════
 
-    // Default rentang saat pertama kali dibuka: awal bulan ini s/d
-    // hari ini (kalau input tanggal masih kosong).
-    function golive_dateKeyLocal_(d) {
-      const y = d.getFullYear();
-      const m = ('0' + (d.getMonth() + 1)).slice(-2);
-      const day = ('0' + d.getDate()).slice(-2);
-      return y + '-' + m + '-' + day;
-    }
+    const GOLIVE_DAILY_MONTH_NAMES = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const GOLIVE_DAILY_YEAR_SPAN_BACK = 3; // tahun berjalan mundur 3 tahun bisa dipilih
 
-    function ensureGoLiveDailyDefaultDates_() {
-      const startEl = document.getElementById('glDailyStartDate');
-      const endEl   = document.getElementById('glDailyEndDate');
-      if (!startEl || !endEl) return;
-      if (startEl.value && endEl.value) return;
+    // Isi dropdown Bulan & Tahun sekali saja saat pertama kali dibuka,
+    // default terpilih = bulan & tahun berjalan.
+    function ensureGoLiveDailyFilterOptions_() {
+      const monthSel = document.getElementById('glDailyMonthSelect');
+      const yearSel  = document.getElementById('glDailyYearSelect');
+      if (!monthSel || !yearSel) return;
 
-      const today = new Date();
-      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      startEl.value = golive_dateKeyLocal_(firstOfMonth);
-      endEl.value   = golive_dateKeyLocal_(today);
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentYear  = now.getFullYear();
+
+      if (!monthSel.options.length) {
+        GOLIVE_DAILY_MONTH_NAMES.forEach(function (name, idx) {
+          const opt = document.createElement('option');
+          opt.value = String(idx + 1);
+          opt.textContent = name;
+          monthSel.appendChild(opt);
+        });
+        monthSel.value = String(currentMonth);
+      }
+
+      if (!yearSel.options.length) {
+        for (let y = currentYear + 1; y >= currentYear - GOLIVE_DAILY_YEAR_SPAN_BACK; y--) {
+          const opt = document.createElement('option');
+          opt.value = String(y);
+          opt.textContent = String(y);
+          yearSel.appendChild(opt);
+        }
+        yearSel.value = String(currentYear);
+      }
     }
 
     function fetchGoLiveDaily() {
       if (isFetchingGoLiveDaily) return;
-      ensureGoLiveDailyDefaultDates_();
+      ensureGoLiveDailyFilterOptions_();
 
-      const startEl = document.getElementById('glDailyStartDate');
-      const endEl   = document.getElementById('glDailyEndDate');
-      const startVal = startEl ? startEl.value : '';
-      const endVal   = endEl ? endEl.value : '';
-      if (!startVal || !endVal) return;
+      const monthSel = document.getElementById('glDailyMonthSelect');
+      const yearSel  = document.getElementById('glDailyYearSelect');
+      const month = monthSel ? parseInt(monthSel.value, 10) : null;
+      const year  = yearSel ? parseInt(yearSel.value, 10) : null;
+      if (!month || !year) return;
 
       isFetchingGoLiveDaily = true;
 
@@ -2520,15 +2536,15 @@ tbody tr:hover td { background: var(--table-th-bg); }
           console.error('Gagal mengambil rekap harian Go Live:', err.message);
           renderGoLiveDailyError_(err.message);
         })
-        .getMonitoringGoLiveDailyPortReal(startVal, endVal);
+        .getMonitoringGoLiveDailyPortReal(year, month);
     }
 
-    // Dipanggil dari tombol "Terapkan" pada filter range tanggal.
+    // Dipanggil dari tombol "Terapkan" pada filter dropdown bulan/tahun.
     function applyGoLiveDailyFilter() {
-      const startEl = document.getElementById('glDailyStartDate');
-      const endEl   = document.getElementById('glDailyEndDate');
-      if (!startEl.value || !endEl.value) {
-        alert('Silakan pilih tanggal awal dan tanggal akhir terlebih dahulu.');
+      const monthSel = document.getElementById('glDailyMonthSelect');
+      const yearSel  = document.getElementById('glDailyYearSelect');
+      if (!monthSel.value || !yearSel.value) {
+        alert('Silakan pilih bulan dan tahun terlebih dahulu.');
         return;
       }
       ['glDailyDistrictBody', 'glDailySubDistrictBody'].forEach(function (id) {

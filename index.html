@@ -667,6 +667,9 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    PWA offline / data dari cache. Warna slice mengikuti keluarga warna
    yang sama dengan tabel rekap: MITRA = oranye, SDI = teal. */
 .golive-charts-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.golive-charts-row-3col .golive-chart-card { flex: 1 1 300px; }
+@media (max-width: 1300px) { .golive-charts-row-3col .golive-chart-card { flex: 1 1 calc(50% - 8px); } }
+@media (max-width: 700px)  { .golive-charts-row-3col .golive-chart-card { flex: 1 1 100%; } }
 .golive-chart-card { flex: 1 1 320px; min-width: 280px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 16px 16px; }
 .golive-chart-body { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .golive-donut-wrap { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
@@ -1135,48 +1138,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
     <div class="page-section" id="page-monitoring-golive">
 
       <!-- ══════════════════════════════════════════════════════════
-           CHART PIE PERSENTASE — MITRA & SDI (satuan: count NAMA LOP)
-           Sumber data SAMA dengan tabel rekap di bawah (GRAND TOTAL
-           per bucket dari getMonitoringGoLiveSummary), tidak ada
-           request/API tambahan. Diisi oleh renderGoLiveBucketCharts_()
-           yang dipanggil dari fetchGoLiveSummary().
-           ══════════════════════════════════════════════════════════ -->
-      <div class="golive-charts-row">
-        <div class="golive-chart-card">
-          <div class="golive-summary-head">
-            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase MITRA (Nama LOP)</div>
-          </div>
-          <div class="golive-chart-body" id="gl-chart-mitra-body">
-            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
-          </div>
-        </div>
-        <div class="golive-chart-card">
-          <div class="golive-summary-head">
-            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase SDI (Nama LOP)</div>
-          </div>
-          <div class="golive-chart-body" id="gl-chart-sdi-body">
-            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════════════════════════
-           CHART BAR — RUN RATE 7 HARI TERAKHIR (PORT REAL)
-           Sumber: getMonitoringGoLiveRunRate7Hari() (request terpisah,
-           ringan). Diisi oleh renderGoLiveRunRateChart_() yang
-           dipanggil dari fetchGoLiveRunRate().
-           ══════════════════════════════════════════════════════════ -->
-      <div class="golive-summary-card">
-        <div class="golive-summary-head">
-          <div class="golive-summary-title"><i class="fa-solid fa-chart-simple"></i> Run Rate 7 Hari Terakhir (PORT REAL)</div>
-        </div>
-        <div class="golive-runrate-body" id="gl-runrate-body">
-          <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat run rate...</div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════════════════════════
-           REKAP PIVOT — PER DISTRICT
+           BARIS 1 — REKAP PIVOT PER DISTRICT
            Filter wajib: NEW STATUS = FI-OGP GO LIVE / GO LIVE.
            ══════════════════════════════════════════════════════════ -->
       <div class="golive-summary-card">
@@ -1221,7 +1183,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
-           REKAP PIVOT — PER SUB DISTRICT
+           BARIS 2 — REKAP PIVOT PER SUB DISTRICT
            ══════════════════════════════════════════════════════════ -->
       <div class="golive-summary-card">
         <div class="golive-summary-head">
@@ -1261,6 +1223,43 @@ tbody tr:hover td { background: var(--table-th-bg); }
               <tr><td colspan="25" class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap per sub district...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           BARIS 3 — 3 CHART DALAM 1 BARIS:
+           Persentase MITRA, Persentase SDI, Run Rate 7 Hari Terakhir.
+           Chart pie sumber data SAMA dengan tabel rekap di atas
+           (GRAND TOTAL per bucket dari getMonitoringGoLiveSummary),
+           diisi oleh renderGoLiveBucketCharts_() yang dipanggil dari
+           fetchGoLiveSummary(). Chart run rate sumber terpisah:
+           getMonitoringGoLiveRunRate7Hari(), diisi oleh
+           renderGoLiveRunRateChart_() dari fetchGoLiveRunRate().
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-charts-row golive-charts-row-3col">
+        <div class="golive-chart-card">
+          <div class="golive-summary-head">
+            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase MITRA (Nama LOP)</div>
+          </div>
+          <div class="golive-chart-body" id="gl-chart-mitra-body">
+            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
+          </div>
+        </div>
+        <div class="golive-chart-card">
+          <div class="golive-summary-head">
+            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase SDI (Nama LOP)</div>
+          </div>
+          <div class="golive-chart-body" id="gl-chart-sdi-body">
+            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
+          </div>
+        </div>
+        <div class="golive-chart-card">
+          <div class="golive-summary-head">
+            <div class="golive-summary-title"><i class="fa-solid fa-chart-simple"></i> Run Rate 7 Hari Terakhir (PORT REAL)</div>
+          </div>
+          <div class="golive-runrate-body" id="gl-runrate-body">
+            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat run rate...</div>
+          </div>
         </div>
       </div>
 

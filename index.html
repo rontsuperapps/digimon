@@ -2093,10 +2093,10 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
     function forceRefreshMonitoringProjectData() {
       document.querySelector('.btn-refresh').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
-      fetchMonitoringProjectData();
+      fetchMonitoringProjectData(true);
     }
 
-    function fetchMonitoringProjectData() {
+    function fetchMonitoringProjectData(forceFresh) {
       if (isFetchingMonitoringProject) return;
       isFetchingMonitoringProject = true;
 
@@ -2128,7 +2128,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
             Gagal memuat data Monitoring Project: ${escapeHtml(err.message)}
           </td></tr>`;
         })
-        .getMonitoringProjectData();
+        .getMonitoringProjectData(!!forceFresh);
     }
 
     function applyMonitoringProjectSearchFilter(resetPage) {
@@ -2252,17 +2252,19 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
     function forceRefreshMonitoringGoLiveData() {
       document.querySelector('.btn-refresh').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
-      fetchMonitoringGoLiveData();
-      fetchGoLiveSummary();
-      fetchGoLiveRunRate();
-      fetchGoLiveDaily();
+      // true = paksa lewati cache 45 detik di server (getMonitoringProjectData),
+      // supaya tombol Refresh Data selalu ambil angka paling baru dari sheet.
+      fetchMonitoringGoLiveData(true);
+      fetchGoLiveSummary(true);
+      fetchGoLiveRunRate(true);
+      fetchGoLiveDaily(true);
     }
 
     // ══════════════════════════════════════════════════════════════
     // ── REKAP PIVOT GO LIVE (PER DISTRICT / SUB DISTRICT) ──
     // ══════════════════════════════════════════════════════════════
 
-    function fetchGoLiveSummary() {
+    function fetchGoLiveSummary(forceFresh) {
       if (isFetchingGoLiveSummary) return;
       isFetchingGoLiveSummary = true;
 
@@ -2287,7 +2289,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
           renderGoLiveSummaryError_(err.message);
           renderGoLiveChartError_(err.message);
         })
-        .getMonitoringGoLiveSummary();
+        .getMonitoringGoLiveSummary(!!forceFresh);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -2399,7 +2401,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
     // dengan donut MITRA/SDI (tanpa library chart apapun).
     // ══════════════════════════════════════════════════════════════
 
-    function fetchGoLiveRunRate() {
+    function fetchGoLiveRunRate(forceFresh) {
       if (isFetchingGoLiveRunRate) return;
       isFetchingGoLiveRunRate = true;
 
@@ -2420,7 +2422,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
           console.error('Gagal mengambil run rate 7 hari Monitoring Go Live:', err.message);
           renderGoLiveRunRateError_(err.message);
         })
-        .getMonitoringGoLiveRunRate7Hari();
+        .getMonitoringGoLiveRunRate7Hari(!!forceFresh);
     }
 
     function renderGoLiveRunRateChart_(days) {
@@ -2534,7 +2536,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       }
     }
 
-    function fetchGoLiveDaily() {
+    function fetchGoLiveDaily(forceFresh) {
       if (isFetchingGoLiveDaily) return;
       ensureGoLiveDailyFilterOptions_();
 
@@ -2564,7 +2566,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
           console.error('Gagal mengambil rekap harian Go Live:', err.message);
           renderGoLiveDailyError_(err.message);
         })
-        .getMonitoringGoLiveDailyPortReal(year, month);
+        .getMonitoringGoLiveDailyPortReal(year, month, !!forceFresh);
     }
 
     // Dipanggil dari tombol "Terapkan" pada filter dropdown bulan/tahun.
@@ -2741,7 +2743,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       tbody.innerHTML = bodyHtml + totalHtml;
     }
 
-    function fetchMonitoringGoLiveData() {
+    function fetchMonitoringGoLiveData(forceFresh) {
       if (isFetchingMonitoringGoLive) return;
       isFetchingMonitoringGoLive = true;
 
@@ -2773,7 +2775,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
             Gagal memuat data Monitoring Go Live: ${escapeHtml(err.message)}
           </td></tr>`;
         })
-        .getMonitoringGoLiveData();
+        .getMonitoringGoLiveData(!!forceFresh);
     }
 
     function applyMonitoringGoLiveSearchFilter(resetPage) {

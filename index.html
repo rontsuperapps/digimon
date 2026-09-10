@@ -661,6 +661,32 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-summary-title { font-size: 13px; font-weight: 700; color: var(--text-title); display: flex; align-items: center; gap: 8px; }
 .golive-summary-title i { color: var(--accent-color); font-size: 12px; }
 
+/* ── Chart pie/donut persentase MITRA & SDI (count NAMA LOP) ──
+   Dibuat pakai CSS conic-gradient murni (tanpa library chart apapun)
+   supaya ringan, tidak nambah request jaringan, dan tetap jalan saat
+   PWA offline / data dari cache. Warna slice mengikuti keluarga warna
+   yang sama dengan tabel rekap: MITRA = oranye, SDI = teal. */
+.golive-charts-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.golive-chart-card { flex: 1 1 320px; min-width: 280px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 16px 16px; }
+.golive-chart-body { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.golive-donut-wrap { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
+.golive-donut { width: 132px; height: 132px; border-radius: 50%; background: conic-gradient(var(--table-th-bg) 0deg 360deg); transition: background 0.3s; }
+.golive-donut-hole { position: absolute; inset: 18px; border-radius: 50%; background: var(--card-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.golive-donut-hole .dn-total { font-size: 19px; font-weight: 800; color: var(--text-title); line-height: 1.1; }
+.golive-donut-hole .dn-label { font-size: 8.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.3px; margin-top: 2px; }
+.golive-chart-legend { flex: 1 1 140px; display: flex; flex-direction: column; gap: 8px; min-width: 150px; }
+.golive-chart-legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.golive-chart-legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.golive-chart-legend-name { flex: 1; color: var(--text-main); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.golive-chart-legend-val { color: var(--text-title); font-weight: 700; white-space: nowrap; }
+.golive-chart-legend-pct { color: var(--text-muted); font-size: 9.5px; width: 40px; text-align: right; flex-shrink: 0; }
+.golive-chart-empty { text-align: center; padding: 20px 10px; color: var(--text-muted); font-size: 11px; width: 100%; }
+.golive-chart-empty i { font-size: 18px; opacity: .4; display: block; margin-bottom: 6px; }
+@media (max-width: 480px) {
+  .golive-chart-body { justify-content: center; }
+  .golive-donut-wrap { margin: 0 auto; }
+}
+
 /* Header level 1 — DISTRICT/SUB DISTRICT (rowspan 3) & band TOTAL/MITRA/SDI:
    SEMUA solid biru (sama persis dengan DISTRICT), tidak ada navy terpisah. */
 .pivot-grouped-table thead th.hdr-navy { background: var(--pivot-blue); color: #fff; font-size: 10.5px; vertical-align: middle; }
@@ -1094,6 +1120,32 @@ tbody tr:hover td { background: var(--table-th-bg); }
          HALAMAN: MONITORING GO LIVE (subset kolom: identitas + Go Live)
          ══════════════════════════════════════════════════════════ -->
     <div class="page-section" id="page-monitoring-golive">
+
+      <!-- ══════════════════════════════════════════════════════════
+           CHART PIE PERSENTASE — MITRA & SDI (satuan: count NAMA LOP)
+           Sumber data SAMA dengan tabel rekap di bawah (GRAND TOTAL
+           per bucket dari getMonitoringGoLiveSummary), tidak ada
+           request/API tambahan. Diisi oleh renderGoLiveBucketCharts_()
+           yang dipanggil dari fetchGoLiveSummary().
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-charts-row">
+        <div class="golive-chart-card">
+          <div class="golive-summary-head">
+            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase MITRA (Nama LOP)</div>
+          </div>
+          <div class="golive-chart-body" id="gl-chart-mitra-body">
+            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
+          </div>
+        </div>
+        <div class="golive-chart-card">
+          <div class="golive-summary-head">
+            <div class="golive-summary-title"><i class="fa-solid fa-chart-pie"></i> Persentase SDI (Nama LOP)</div>
+          </div>
+          <div class="golive-chart-body" id="gl-chart-sdi-body">
+            <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat chart...</div>
+          </div>
+        </div>
+      </div>
 
       <!-- ══════════════════════════════════════════════════════════
            REKAP PIVOT — PER DISTRICT
@@ -2085,14 +2137,116 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
           renderGoLiveSummaryTable_('gl-summary-district-target', response.byDistrict, response.byDistrictGrandTotal, 'DISTRICT');
           renderGoLiveSummaryTable_('gl-summary-subdistrict-target', response.bySubDistrict, response.bySubDistrictGrandTotal, 'SUB DISTRICT');
+          renderGoLiveBucketCharts_(response.byDistrictGrandTotal);
           syncAllPivotStickyHeaders_();
         })
         .withFailureHandler(function(err) {
           isFetchingGoLiveSummary = false;
           console.error('Gagal mengambil rekap Monitoring Go Live:', err.message);
           renderGoLiveSummaryError_(err.message);
+          renderGoLiveChartError_(err.message);
         })
         .getMonitoringGoLiveSummary();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── CHART PIE PERSENTASE MITRA & SDI (satuan: count NAMA LOP) ──
+    // Dipakai di atas tabel rekap, sumber data SAMA (GRAND TOTAL dari
+    // getMonitoringGoLiveSummary) -- tidak ada request tambahan ke
+    // server. Digambar pakai CSS conic-gradient (bukan <canvas>/library
+    // chart), supaya tetap ringan & jalan walau PWA lagi offline/cache.
+    // ══════════════════════════════════════════════════════════════
+
+    // Palet warna per slice, senada dengan warna kelompok di tabel
+    // rekap (MITRA = keluarga oranye, SDI = keluarga teal).
+    const GOLIVE_CHART_GROUPS = {
+      mitra: {
+        bodyId: 'gl-chart-mitra-body',
+        unitLabel: 'NAMA LOP',
+        slices: [
+          { key: 'createAbd',   label: 'CREATE ABD',   color: '#EF900E' },
+          { key: 'revisionAbd', label: 'REVISION ABD', color: '#FFAE42' },
+          { key: 'kendalaAbd',  label: 'KENDALA ABD',  color: '#C2660A' }
+        ]
+      },
+      sdi: {
+        bodyId: 'gl-chart-sdi-body',
+        unitLabel: 'NAMA LOP',
+        slices: [
+          { key: 'validation',  label: 'VALIDATION',  color: '#0E7A67' },
+          { key: 'drawing',     label: 'DRAWING',      color: '#12967F' },
+          { key: 'termination', label: 'TERMINATION',  color: '#3FC1A8' },
+          { key: 'goLive',      label: 'GO LIVE',      color: '#8FE0CE' }
+        ]
+      }
+    };
+
+    // Bangun 1 donut + legend untuk satu grup (mitra/sdi) dari objek
+    // "buckets" GRAND TOTAL (tiap bucket = { lop, odp, port }). Nilai
+    // yang dipakai KHUSUS "lop" karena itu count baris/Nama LOP, sesuai
+    // permintaan (bukan penjumlahan ODP/PORT).
+    function renderOneGoLiveChart_(groupKey, grandTotal) {
+      const cfg = GOLIVE_CHART_GROUPS[groupKey];
+      const body = document.getElementById(cfg.bodyId);
+      if (!body) return;
+
+      const buckets = (grandTotal && grandTotal.buckets) || {};
+      const values = cfg.slices.map(function (s) { return (buckets[s.key] && buckets[s.key].lop) || 0; });
+      const total = values.reduce(function (a, b) { return a + b; }, 0);
+
+      if (total === 0) {
+        body.innerHTML = `<div class="golive-chart-empty"><i class="fa-solid fa-chart-pie"></i>Belum ada data Nama LOP untuk grup ini</div>`;
+        return;
+      }
+
+      // Susun stop conic-gradient berurutan sesuai persentase tiap slice.
+      let cursorDeg = 0;
+      const gradientParts = [];
+      const legendItems = [];
+      cfg.slices.forEach(function (s, i) {
+        const v = values[i];
+        const pct = (v / total) * 100;
+        const deg = (v / total) * 360;
+        if (v > 0) {
+          gradientParts.push(s.color + ' ' + cursorDeg.toFixed(2) + 'deg ' + (cursorDeg + deg).toFixed(2) + 'deg');
+        }
+        cursorDeg += deg;
+        legendItems.push(`
+          <div class="golive-chart-legend-item">
+            <span class="golive-chart-legend-swatch" style="background:${s.color};"></span>
+            <span class="golive-chart-legend-name">${s.label}</span>
+            <span class="golive-chart-legend-val">${formatNum_(v)}</span>
+            <span class="golive-chart-legend-pct">${pct.toFixed(1)}%</span>
+          </div>`);
+      });
+      const gradientCss = gradientParts.length
+        ? 'conic-gradient(' + gradientParts.join(', ') + ')'
+        : 'conic-gradient(var(--table-th-bg) 0deg 360deg)';
+
+      body.innerHTML = `
+        <div class="golive-donut-wrap">
+          <div class="golive-donut" style="background:${gradientCss};"></div>
+          <div class="golive-donut-hole">
+            <div class="dn-total">${formatNum_(total)}</div>
+            <div class="dn-label">${cfg.unitLabel}</div>
+          </div>
+        </div>
+        <div class="golive-chart-legend">${legendItems.join('')}</div>`;
+    }
+
+    function renderGoLiveBucketCharts_(grandTotal) {
+      renderOneGoLiveChart_('mitra', grandTotal);
+      renderOneGoLiveChart_('sdi', grandTotal);
+    }
+
+    function renderGoLiveChartError_(message) {
+      const errHtml = `<div class="golive-chart-empty" style="color:var(--danger-color);">
+        <i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(message) || 'Gagal memuat chart'}
+      </div>`;
+      ['gl-chart-mitra-body', 'gl-chart-sdi-body'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = errHtml;
+      });
     }
 
     // Format angka pakai pemisah ribuan gaya Indonesia (1000 -> "1.000").

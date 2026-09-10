@@ -653,6 +653,8 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
   --pivot-orange-bg: rgba(239,144,14,0.08);
   --pivot-teal: #12967F;
   --pivot-teal-bg: rgba(18,150,127,0.08);
+  --pivot-green-text: #15733E;
+  --pivot-green-bg: rgba(21,163,74,0.16);
 }
 [data-theme="dark"] {
   --pivot-navy-text: var(--text-title);
@@ -662,6 +664,8 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
   --pivot-orange-bg: rgba(240,144,15,0.14);
   --pivot-teal: #17B79B;
   --pivot-teal-bg: rgba(23,183,155,0.14);
+  --pivot-green-text: #6FE3A0;
+  --pivot-green-bg: rgba(34,197,94,0.22);
 }
 
 .golive-summary-card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-card); padding: 14px 14px 16px; margin-bottom: 16px; }
@@ -762,6 +766,11 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
    seluruh baris terlihat menyatu (bukan cuma 2 kolom pertama berwarna lalu
    sisanya putih polos -- itulah sumber tampilan "belang-belang"). */
 .pivot-grouped-table td.cell-date { background: var(--pivot-blue-bg); }
+/* Highlight tanggal dengan perolehan > 0 pada tabel "Perolehan Go Live Harian" --
+   soft hijau supaya hari-hari yang ADA Go Live langsung kelihatan sekilas
+   dibanding hari kosong (masih tint biru netral). Tidak dipasang di baris
+   GRAND TOTAL karena baris itu sudah solid biru + teks putih tersendiri. */
+.pivot-grouped-table td.cell-date-hit { background: var(--pivot-green-bg); color: var(--pivot-green-text); font-weight: 700; }
 
 /* Baris GRAND TOTAL — warna solid SAMA PERSIS dengan header (bukan versi lebih gelap) */
 .pivot-grouped-table tbody tr.pivot-total-row td { font-weight: 800; color: #fff; border-color: rgba(255,255,255,0.35); }
@@ -2578,7 +2587,11 @@ tbody tr:hover td { background: var(--table-th-bg); }
       let tds = `<td class="label-cell">${escapeHtml(rowLabel)}</td>`;
       tds += `<td class="num-cell cell-total">${formatNum_(total)}</td>`;
       dateKeys.forEach(function (k) {
-        tds += `<td class="num-cell cell-date">${formatNum_((byDate && byDate[k]) || 0)}</td>`;
+        const val = (byDate && byDate[k]) || 0;
+        // Baris biasa dengan nilai > 0 dapat highlight hijau; baris GRAND TOTAL
+        // tetap pakai warna solid birunya sendiri (lihat rule .pivot-total-row td.cell-date).
+        const hitClass = (!isGrandTotal && val !== 0) ? ' cell-date-hit' : '';
+        tds += `<td class="num-cell cell-date${hitClass}">${formatNum_(val)}</td>`;
       });
       return `<tr${rowClass}>${tds}</tr>`;
     }

@@ -698,6 +698,28 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-runrate-bar-label { font-size: 10px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
 .golive-runrate-total { font-size: 10.5px; color: var(--text-muted); margin-top: 10px; text-align: right; }
 .golive-runrate-total b { color: var(--text-title); }
+
+/* ── Perolehan Go Live Harian (PORT REAL) + filter range tanggal ──
+   Tabel dibangun dinamis lewat JS (jumlah kolom tanggal mengikuti
+   rentang yang dipilih), styling reuse class pivot-grouped-table yang
+   sudah ada supaya konsisten dengan rekap District/Sub District. */
+.golive-daily-subtitle { font-size: 11.5px; font-weight: 700; color: var(--text-title); margin: 14px 0 8px; }
+.golive-daily-subtitle:first-of-type { margin-top: 2px; }
+.golive-daily-filter { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.golive-daily-filter-field { display: flex; flex-direction: column; gap: 4px; }
+.golive-daily-filter-field label { font-size: 10.5px; font-weight: 600; color: var(--text-muted); }
+.golive-daily-filter-field input[type="date"] {
+  background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px;
+  color: var(--text-title); font-family: 'Poppins', sans-serif; font-size: 11.5px;
+  padding: 7px 8px; outline: none;
+}
+.golive-daily-filter-btn {
+  background: var(--accent-color); color: #fff; border: 1px solid var(--accent-color);
+  padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 12.5px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0; transition: background 0.15s;
+}
+.golive-daily-filter-btn:hover { background: var(--accent-color-hover); }
+.golive-daily-filter-hint { font-size: 10px; color: var(--text-muted); flex-basis: 100%; }
 @media (max-width: 480px) {
   .golive-chart-body { justify-content: center; }
   .golive-donut-wrap { margin: 0 auto; }
@@ -1264,6 +1286,59 @@ tbody tr:hover td { background: var(--table-th-bg); }
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
+           BARIS 4 — PEROLEHAN GO LIVE HARIAN (PORT REAL) + FILTER
+           RANGE TANGGAL. Sumber: getMonitoringGoLiveDailyPortReal()
+           dengan parameter (startDate, endDate). Rekap Per District &
+           Per Sub District, kolom = tiap tanggal dalam rentang.
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-summary-card">
+        <div class="golive-summary-head">
+          <div class="golive-summary-title"><i class="fa-solid fa-calendar-days"></i> Perolehan Go Live Harian (PORT REAL)</div>
+        </div>
+
+        <div class="golive-daily-filter">
+          <div class="golive-daily-filter-field">
+            <label for="glDailyStartDate">Dari Tanggal</label>
+            <input type="date" id="glDailyStartDate">
+          </div>
+          <div class="golive-daily-filter-field">
+            <label for="glDailyEndDate">Sampai Tanggal</label>
+            <input type="date" id="glDailyEndDate">
+          </div>
+          <button type="button" class="golive-daily-filter-btn" onclick="applyGoLiveDailyFilter()">
+            <i class="fa-solid fa-filter"></i> Terapkan
+          </button>
+          <div class="golive-daily-filter-hint">Nilai yang ditampilkan = PORT REAL untuk baris berstatus GO LIVE, dikelompokkan per tanggal GO LIVE. Rentang maksimal 92 hari.</div>
+        </div>
+
+        <div class="golive-daily-subtitle">Rekap Per District</div>
+        <div class="golive-scroll-hint"><i class="fa-solid fa-chevron-right"></i> Geser tabel ke kanan untuk melihat semua tanggal</div>
+        <div class="pivot-table-wrap pivot-table-wrap-full">
+          <table class="pivot-grouped-table" id="glDailyDistrictTable">
+            <thead id="glDailyDistrictThead">
+              <tr><th class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i></th></tr>
+            </thead>
+            <tbody id="glDailyDistrictBody">
+              <tr><td class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap harian per district...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="golive-daily-subtitle">Rekap Per Sub District</div>
+        <div class="golive-scroll-hint"><i class="fa-solid fa-chevron-right"></i> Geser tabel ke kanan untuk melihat semua tanggal</div>
+        <div class="pivot-table-wrap pivot-table-wrap-full">
+          <table class="pivot-grouped-table" id="glDailySubDistrictTable">
+            <thead id="glDailySubDistrictThead">
+              <tr><th class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i></th></tr>
+            </thead>
+            <tbody id="glDailySubDistrictBody">
+              <tr><td class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap harian per sub district...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
            TABEL LIST DETAIL (per-baris project) — tetap dipertahankan
            ══════════════════════════════════════════════════════════ -->
       <div class="table-container">
@@ -1419,7 +1494,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
     const PWA_OFFLINE_CACHEABLE_FN = [
       'getMonitoringProjectData', 'getMonitoringGoLiveData',
       'getLoggedInUserInfo', 'getMyProfile', 'getNotifications',
-      'getMonitoringGoLiveRunRate7Hari'
+      'getMonitoringGoLiveRunRate7Hari', 'getMonitoringGoLiveDailyPortReal'
     ];
 
     function pwaOfflineCacheKey_(fn, args) {
@@ -1572,6 +1647,9 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
     let isFetchingGoLiveRunRate     = false;
     let goLiveRunRateLoadedOnce     = false;
+
+    let isFetchingGoLiveDaily       = false;
+    let goLiveDailyLoadedOnce       = false;
 
     // Urutan bucket MITRA/SDI harus SAMA dengan urutan kolom di <thead>
     // tabel rekap (lihat markup #glSummaryDistrictTable / #glSummarySubDistrictTable).
@@ -1948,6 +2026,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
         if (!monitoringGoLiveLoadedOnce) fetchMonitoringGoLiveData();
         if (!goLiveSummaryLoadedOnce) fetchGoLiveSummary();
         if (!goLiveRunRateLoadedOnce) fetchGoLiveRunRate();
+        if (!goLiveDailyLoadedOnce) { ensureGoLiveDailyDefaultDates_(); fetchGoLiveDaily(); }
       } else {
         document.getElementById('page-monitoring-project').classList.add('active-page');
         syncSidebarActiveState('nav-monitoring-project');
@@ -2148,6 +2227,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       fetchMonitoringGoLiveData();
       fetchGoLiveSummary();
       fetchGoLiveRunRate();
+      fetchGoLiveDaily();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -2377,6 +2457,140 @@ tbody tr:hover td { background: var(--table-th-bg); }
       const m = ('0' + (d.getMonth() + 1)).slice(-2);
       const day = ('0' + d.getDate()).slice(-2);
       return y + '-' + m + '-' + day;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── BARIS 4: PEROLEHAN GO LIVE HARIAN (PORT REAL) + FILTER
+    //    RANGE TANGGAL ──
+    // Request ke getMonitoringGoLiveDailyPortReal(startDate, endDate).
+    // Tabel dibangun dinamis lewat JS karena jumlah kolom tanggal
+    // mengikuti rentang yang dipilih user, style reuse pivot-grouped-
+    // table yang sudah ada (konsisten dengan rekap District/Sub
+    // District di atas).
+    // ══════════════════════════════════════════════════════════════
+
+    // Default rentang saat pertama kali dibuka: awal bulan ini s/d
+    // hari ini (kalau input tanggal masih kosong).
+    function golive_dateKeyLocal_(d) {
+      const y = d.getFullYear();
+      const m = ('0' + (d.getMonth() + 1)).slice(-2);
+      const day = ('0' + d.getDate()).slice(-2);
+      return y + '-' + m + '-' + day;
+    }
+
+    function ensureGoLiveDailyDefaultDates_() {
+      const startEl = document.getElementById('glDailyStartDate');
+      const endEl   = document.getElementById('glDailyEndDate');
+      if (!startEl || !endEl) return;
+      if (startEl.value && endEl.value) return;
+
+      const today = new Date();
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      startEl.value = golive_dateKeyLocal_(firstOfMonth);
+      endEl.value   = golive_dateKeyLocal_(today);
+    }
+
+    function fetchGoLiveDaily() {
+      if (isFetchingGoLiveDaily) return;
+      ensureGoLiveDailyDefaultDates_();
+
+      const startEl = document.getElementById('glDailyStartDate');
+      const endEl   = document.getElementById('glDailyEndDate');
+      const startVal = startEl ? startEl.value : '';
+      const endVal   = endEl ? endEl.value : '';
+      if (!startVal || !endVal) return;
+
+      isFetchingGoLiveDaily = true;
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          isFetchingGoLiveDaily = false;
+          goLiveDailyLoadedOnce = true;
+
+          if (!response || !response.success) {
+            renderGoLiveDailyError_(response && response.message);
+            return;
+          }
+
+          renderGoLiveDailyTable_('glDailyDistrictThead', 'glDailyDistrictBody', response.byDistrict, response.dates, 'DISTRICT');
+          renderGoLiveDailyTable_('glDailySubDistrictThead', 'glDailySubDistrictBody', response.bySubDistrict, response.dates, 'SUB DISTRICT');
+        })
+        .withFailureHandler(function (err) {
+          isFetchingGoLiveDaily = false;
+          console.error('Gagal mengambil rekap harian Go Live:', err.message);
+          renderGoLiveDailyError_(err.message);
+        })
+        .getMonitoringGoLiveDailyPortReal(startVal, endVal);
+    }
+
+    // Dipanggil dari tombol "Terapkan" pada filter range tanggal.
+    function applyGoLiveDailyFilter() {
+      const startEl = document.getElementById('glDailyStartDate');
+      const endEl   = document.getElementById('glDailyEndDate');
+      if (!startEl.value || !endEl.value) {
+        alert('Silakan pilih tanggal awal dan tanggal akhir terlebih dahulu.');
+        return;
+      }
+      ['glDailyDistrictBody', 'glDailySubDistrictBody'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<tr><td class="golive-summary-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat rekap harian...</td></tr>`;
+      });
+      fetchGoLiveDaily();
+    }
+
+    function golive_dailyPivotRowHtml_(rowLabel, total, byDate, dateKeys, isGrandTotal) {
+      const rowClass = isGrandTotal ? ' class="pivot-total-row"' : '';
+      let tds = `<td class="label-cell">${escapeHtml(rowLabel)}</td>`;
+      tds += `<td class="num-cell cell-total">${formatNum_(total)}</td>`;
+      dateKeys.forEach(function (k) {
+        tds += `<td class="num-cell">${formatNum_((byDate && byDate[k]) || 0)}</td>`;
+      });
+      return `<tr${rowClass}>${tds}</tr>`;
+    }
+
+    function renderGoLiveDailyTable_(theadId, tbodyId, pivot, dateMeta, identityLabel) {
+      const thead = document.getElementById(theadId);
+      const tbody = document.getElementById(tbodyId);
+      if (!thead || !tbody) return;
+
+      dateMeta = dateMeta || [];
+      const dateKeys = dateMeta.map(function (d) { return d.key; });
+      const colCount = dateKeys.length + 2; // identitas + TOTAL + tiap tanggal
+
+      thead.innerHTML = `
+        <tr class="pivot-hdr-r1">
+          <th rowspan="2" class="hdr-navy">${escapeHtml(identityLabel)}</th>
+          <th rowspan="2" class="hdr-band hdr-band-total">TOTAL</th>
+          <th colspan="${dateKeys.length}" class="hdr-band hdr-band-total">TANGGAL</th>
+        </tr>
+        <tr class="pivot-hdr-r2">
+          ${dateMeta.map(function (d) { return `<th class="hdr-sub-total">${escapeHtml(d.label)}</th>`; }).join('')}
+        </tr>`;
+
+      const rows = (pivot && pivot.rows) || [];
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="${colCount}" class="golive-summary-empty"><i class="fa-solid fa-calendar-xmark"></i>Tidak ada data Go Live pada rentang tanggal ini</td></tr>`;
+        return;
+      }
+
+      let html = rows.map(function (r) {
+        return golive_dailyPivotRowHtml_(r.label, r.total, r.byDate, dateKeys, false);
+      }).join('');
+
+      const gt = (pivot && pivot.grandTotal) || { label: 'GRAND TOTAL', total: 0, byDate: {} };
+      html += golive_dailyPivotRowHtml_(gt.label || 'GRAND TOTAL', gt.total, gt.byDate, dateKeys, true);
+
+      tbody.innerHTML = html;
+    }
+
+    function renderGoLiveDailyError_(message) {
+      const errHtml = `<tr><td class="golive-summary-empty" style="color:var(--danger-color);">
+        <i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(message) || 'Gagal memuat rekap harian'}
+      </td></tr>`;
+      ['glDailyDistrictBody', 'glDailySubDistrictBody'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = errHtml;
+      });
     }
 
     // Format angka pakai pemisah ribuan gaya Indonesia (1000 -> "1.000").

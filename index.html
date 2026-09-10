@@ -682,6 +682,19 @@ body { font-family: 'Poppins', sans-serif; font-size: 13px; background-color: va
 .golive-chart-legend-pct { color: var(--text-muted); font-size: 9.5px; width: 40px; text-align: right; flex-shrink: 0; }
 .golive-chart-empty { text-align: center; padding: 20px 10px; color: var(--text-muted); font-size: 11px; width: 100%; }
 .golive-chart-empty i { font-size: 18px; opacity: .4; display: block; margin-bottom: 6px; }
+
+/* ── Bar chart "Run Rate 7 Hari Terakhir" (PORT REAL) ──
+   Dibuat pakai CSS murni (bar dengan height %), konsisten dengan
+   donut MITRA/SDI di atas (tanpa library chart apapun). */
+.golive-runrate-body { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 6px 4px 0; }
+.golive-runrate-bar-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; }
+.golive-runrate-bar-val { font-size: 10.5px; font-weight: 700; color: var(--text-title); white-space: nowrap; }
+.golive-runrate-bar-track { width: 100%; max-width: 34px; flex: 1 1 auto; display: flex; align-items: flex-end; }
+.golive-runrate-bar { width: 100%; min-height: 2px; border-radius: 5px 5px 0 0; background: var(--accent-color); transition: height 0.3s; }
+.golive-runrate-bar-col.is-today .golive-runrate-bar { background: #EF900E; }
+.golive-runrate-bar-label { font-size: 10px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+.golive-runrate-total { font-size: 10.5px; color: var(--text-muted); margin-top: 10px; text-align: right; }
+.golive-runrate-total b { color: var(--text-title); }
 @media (max-width: 480px) {
   .golive-chart-body { justify-content: center; }
   .golive-donut-wrap { margin: 0 auto; }
@@ -1148,6 +1161,21 @@ tbody tr:hover td { background: var(--table-th-bg); }
       </div>
 
       <!-- ══════════════════════════════════════════════════════════
+           CHART BAR — RUN RATE 7 HARI TERAKHIR (PORT REAL)
+           Sumber: getMonitoringGoLiveRunRate7Hari() (request terpisah,
+           ringan). Diisi oleh renderGoLiveRunRateChart_() yang
+           dipanggil dari fetchGoLiveRunRate().
+           ══════════════════════════════════════════════════════════ -->
+      <div class="golive-summary-card">
+        <div class="golive-summary-head">
+          <div class="golive-summary-title"><i class="fa-solid fa-chart-simple"></i> Run Rate 7 Hari Terakhir (PORT REAL)</div>
+        </div>
+        <div class="golive-runrate-body" id="gl-runrate-body">
+          <div class="golive-chart-empty"><i class="fa-solid fa-spinner fa-spin"></i>Memuat run rate...</div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
            REKAP PIVOT — PER DISTRICT
            Filter wajib: NEW STATUS = FI-OGP GO LIVE / GO LIVE.
            ══════════════════════════════════════════════════════════ -->
@@ -1391,7 +1419,8 @@ tbody tr:hover td { background: var(--table-th-bg); }
     // ter-cache saat online").
     const PWA_OFFLINE_CACHEABLE_FN = [
       'getMonitoringProjectData', 'getMonitoringGoLiveData',
-      'getLoggedInUserInfo', 'getMyProfile', 'getNotifications'
+      'getLoggedInUserInfo', 'getMyProfile', 'getNotifications',
+      'getMonitoringGoLiveRunRate7Hari'
     ];
 
     function pwaOfflineCacheKey_(fn, args) {
@@ -1541,6 +1570,9 @@ tbody tr:hover td { background: var(--table-th-bg); }
 
     let isFetchingGoLiveSummary     = false;
     let goLiveSummaryLoadedOnce     = false;
+
+    let isFetchingGoLiveRunRate     = false;
+    let goLiveRunRateLoadedOnce     = false;
 
     // Urutan bucket MITRA/SDI harus SAMA dengan urutan kolom di <thead>
     // tabel rekap (lihat markup #glSummaryDistrictTable / #glSummarySubDistrictTable).
@@ -1916,6 +1948,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
         document.getElementById('pageSubtitle').innerText = 'Status & tanggal go live tiap project FBB Jatim';
         if (!monitoringGoLiveLoadedOnce) fetchMonitoringGoLiveData();
         if (!goLiveSummaryLoadedOnce) fetchGoLiveSummary();
+        if (!goLiveRunRateLoadedOnce) fetchGoLiveRunRate();
       } else {
         document.getElementById('page-monitoring-project').classList.add('active-page');
         syncSidebarActiveState('nav-monitoring-project');
@@ -2115,6 +2148,7 @@ tbody tr:hover td { background: var(--table-th-bg); }
       document.querySelector('.btn-refresh').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
       fetchMonitoringGoLiveData();
       fetchGoLiveSummary();
+      fetchGoLiveRunRate();
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -2247,6 +2281,103 @@ tbody tr:hover td { background: var(--table-th-bg); }
         const el = document.getElementById(id);
         if (el) el.innerHTML = errHtml;
       });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── CHART BAR "RUN RATE 7 HARI TERAKHIR" (PORT REAL) ──
+    // Request terpisah ke getMonitoringGoLiveRunRate7Hari() (backend
+    // menjumlahkan PORT REAL per hari, untuk baris NEW STATUS = "GO
+    // LIVE" yang TANGGAL GO LIVE-nya jatuh di 7 hari terakhir).
+    // Digambar pakai CSS bar (height % dari nilai maksimum), konsisten
+    // dengan donut MITRA/SDI (tanpa library chart apapun).
+    // ══════════════════════════════════════════════════════════════
+
+    function fetchGoLiveRunRate() {
+      if (isFetchingGoLiveRunRate) return;
+      isFetchingGoLiveRunRate = true;
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          isFetchingGoLiveRunRate = false;
+          goLiveRunRateLoadedOnce = true;
+
+          if (!response || !response.success) {
+            renderGoLiveRunRateError_(response && response.message);
+            return;
+          }
+
+          renderGoLiveRunRateChart_(response.days || []);
+        })
+        .withFailureHandler(function (err) {
+          isFetchingGoLiveRunRate = false;
+          console.error('Gagal mengambil run rate 7 hari Monitoring Go Live:', err.message);
+          renderGoLiveRunRateError_(err.message);
+        })
+        .getMonitoringGoLiveRunRate7Hari();
+    }
+
+    function renderGoLiveRunRateChart_(days) {
+      const body = document.getElementById('gl-runrate-body');
+      if (!body) return;
+
+      if (!days.length) {
+        body.innerHTML = `<div class="golive-chart-empty"><i class="fa-solid fa-chart-simple"></i>Belum ada data run rate</div>`;
+        return;
+      }
+
+      const todayKey = golive_todayKey_();
+      const maxPort  = Math.max.apply(null, days.map(function (d) { return d.port || 0; }));
+      const totalPort = days.reduce(function (a, d) { return a + (d.port || 0); }, 0);
+
+      if (totalPort === 0) {
+        body.innerHTML = `<div class="golive-chart-empty"><i class="fa-solid fa-chart-simple"></i>Belum ada PORT REAL Go Live dalam 7 hari terakhir</div>`;
+        return;
+      }
+
+      const cols = days.map(function (d) {
+        const pct = maxPort > 0 ? Math.max((d.port / maxPort) * 100, d.port > 0 ? 4 : 0) : 0;
+        const isToday = d.key === todayKey ? ' is-today' : '';
+        return `
+          <div class="golive-runrate-bar-col${isToday}">
+            <div class="golive-runrate-bar-val">${formatNum_(d.port)}</div>
+            <div class="golive-runrate-bar-track">
+              <div class="golive-runrate-bar" style="height:${pct.toFixed(1)}%;" title="${d.label}: ${formatNum_(d.port)} PORT REAL"></div>
+            </div>
+            <div class="golive-runrate-bar-label">${d.label}</div>
+          </div>`;
+      });
+
+      body.innerHTML = cols.join('');
+
+      // Total ditaruh sebagai baris terpisah di bawah body flex.
+      const wrap = body.parentElement;
+      if (wrap) {
+        let totalEl = wrap.querySelector('.golive-runrate-total');
+        if (!totalEl) {
+          totalEl = document.createElement('div');
+          totalEl.className = 'golive-runrate-total';
+          wrap.appendChild(totalEl);
+        }
+        totalEl.innerHTML = 'Total 7 hari: <b>' + formatNum_(totalPort) + ' PORT REAL</b>';
+      }
+    }
+
+    function renderGoLiveRunRateError_(message) {
+      const body = document.getElementById('gl-runrate-body');
+      if (!body) return;
+      body.innerHTML = `<div class="golive-chart-empty" style="color:var(--danger-color);">
+        <i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(message) || 'Gagal memuat run rate'}
+      </div>`;
+    }
+
+    // Key hari ini format "yyyy-mm-dd" (lokal browser), dipakai untuk
+    // menandai bar "hari ini" dengan warna beda.
+    function golive_todayKey_() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = ('0' + (d.getMonth() + 1)).slice(-2);
+      const day = ('0' + d.getDate()).slice(-2);
+      return y + '-' + m + '-' + day;
     }
 
     // Format angka pakai pemisah ribuan gaya Indonesia (1000 -> "1.000").

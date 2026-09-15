@@ -1219,18 +1219,55 @@
     // Wrapper pengganti google.script.run. Body dikirim sebagai STRING
     // JSON dengan Content-Type text/plain supaya browser tidak kirim
     // CORS preflight (GAS tidak bisa merespons preflight OPTIONS).
-    async function callGAS(fn, args) {
-      const res = await fetch(GAS_EXEC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ fn: fn, args: args || [] })
-      });
+    //
+    // RETRY DENGAN BACKOFF: disamakan dengan callGAS() di index.html.
+    // Web App GAS (khususnya akun Google konsumer/non-Workspace) punya
+    // batas eksekusi simultan terhadap script yang sama, jadi sesekali
+    // bisa balas HTTP 404/429/5xx transien (bukan dari doPost, tapi
+    // dari layer depan Google sebelum request sempat masuk ke script).
+    // Diulang beberapa kali dengan jeda singkat sebelum benar-benar
+    // dianggap gagal.
+    const CALLGAS_MAX_RETRIES = 2;          // total percobaan = 1 + 2 = 3
+    const CALLGAS_RETRY_BASE_DELAY_MS = 400; // 400ms, lalu 800ms
 
-      if (!res.ok) {
-        throw new Error('HTTP ' + res.status + ' dari server GAS.');
+    function callGasSleep_(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    async function callGAS(fn, args) {
+      let lastErr = null;
+
+      for (let attempt = 0; attempt <= CALLGAS_MAX_RETRIES; attempt++) {
+        let res;
+
+        try {
+          res = await fetch(GAS_EXEC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ fn: fn, args: args || [] })
+          });
+        } catch (networkErr) {
+          lastErr = networkErr;
+          if (attempt < CALLGAS_MAX_RETRIES) {
+            await callGasSleep_(CALLGAS_RETRY_BASE_DELAY_MS * (attempt + 1));
+            continue;
+          }
+          throw networkErr;
+        }
+
+        if (!res.ok) {
+          lastErr = new Error('HTTP ' + res.status + ' dari server GAS.');
+          if (attempt < CALLGAS_MAX_RETRIES) {
+            await callGasSleep_(CALLGAS_RETRY_BASE_DELAY_MS * (attempt + 1));
+            continue;
+          }
+          throw lastErr;
+        }
+
+        return res.json();
       }
 
-      return res.json();
+      throw lastErr || new Error('Gagal memanggil server GAS.');
     }
 
     /* ============================================================

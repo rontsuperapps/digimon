@@ -1573,43 +1573,86 @@ tbody tr:hover td { background: var(--table-th-bg); }
     window.addEventListener('offline', function () { updatePwaOfflineBanner(true); });
     window.addEventListener('online', function () { updatePwaOfflineBanner(false); });
 
+    // ============================================================
+    // RETRY DENGAN BACKOFF UNTUK callGAS()
+    // Web App GAS (khususnya akun Google konsumer/non-Workspace) punya
+    // batas eksekusi simultan terhadap script yang sama. Kalau beberapa
+    // request POST datang nyaris bersamaan (mis. banyak widget di satu
+    // halaman fetch data sekaligus), sebagian bisa "ditolak" oleh layer
+    // depan Google SEBELUM sempat masuk ke doPost -- gejalanya di
+    // browser berupa HTTP 404/429/5xx yang TIDAK muncul di Execution
+    // log GAS sama sekali (karena script-nya sendiri tidak sempat
+    // jalan). Ini transien, jadi cukup diulang beberapa kali dengan
+    // jeda singkat sebelum benar-benar dianggap gagal.
+    // __routerError dari doPost (UNAUTHORIZED/BAD_REQUEST/SERVER_ERROR)
+    // TIDAK diulang karena itu bukan masalah beban/jaringan -- server
+    // sudah benar-benar jalan dan sengaja menjawab begitu.
+    // ============================================================
+    const CALLGAS_MAX_RETRIES = 2;          // total percobaan = 1 + 2 = 3
+    const CALLGAS_RETRY_BASE_DELAY_MS = 400; // 400ms, lalu 800ms
+
+    function callGasSleep_(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
     async function callGAS(fn, args) {
-      let res;
+      let lastErr = null;
 
-      try {
-        res = await fetch(GAS_EXEC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ fn: fn, args: args || [], token: SESSION_TOKEN })
-        });
-      } catch (networkErr) {
-        const cached = readPwaOfflineCache_(fn, args);
-        if (cached) {
-          updatePwaOfflineBanner(true, cached.ts);
-          return cached.data;
+      for (let attempt = 0; attempt <= CALLGAS_MAX_RETRIES; attempt++) {
+        let res;
+
+        try {
+          res = await fetch(GAS_EXEC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ fn: fn, args: args || [], token: SESSION_TOKEN })
+          });
+        } catch (networkErr) {
+          lastErr = networkErr;
+          if (attempt < CALLGAS_MAX_RETRIES) {
+            await callGasSleep_(CALLGAS_RETRY_BASE_DELAY_MS * (attempt + 1));
+            continue;
+          }
+          const cached = readPwaOfflineCache_(fn, args);
+          if (cached) {
+            updatePwaOfflineBanner(true, cached.ts);
+            return cached.data;
+          }
+          updatePwaOfflineBanner(true);
+          throw new Error('Tidak bisa terhubung ke server (periksa koneksi internet). ' + networkErr.message);
         }
-        updatePwaOfflineBanner(true);
-        throw new Error('Tidak bisa terhubung ke server (periksa koneksi internet). ' + networkErr.message);
-      }
 
-      if (!res.ok) {
-        throw new Error('HTTP ' + res.status + ' dari server GAS.');
-      }
-
-      const data = await res.json();
-
-      if (data && data.__routerError) {
-        if (data.code === 'UNAUTHORIZED') {
-          localStorage.removeItem('monproj_session_token');
-          window.location.replace('login.html');
+        if (!res.ok) {
+          lastErr = new Error('HTTP ' + res.status + ' dari server GAS.');
+          if (attempt < CALLGAS_MAX_RETRIES) {
+            await callGasSleep_(CALLGAS_RETRY_BASE_DELAY_MS * (attempt + 1));
+            continue;
+          }
+          const cached = readPwaOfflineCache_(fn, args);
+          if (cached) {
+            updatePwaOfflineBanner(true, cached.ts);
+            return cached.data;
+          }
+          throw lastErr;
         }
-        throw new Error(data.message || ('Router error: ' + data.code));
+
+        const data = await res.json();
+
+        if (data && data.__routerError) {
+          if (data.code === 'UNAUTHORIZED') {
+            localStorage.removeItem('monproj_session_token');
+            window.location.replace('login.html');
+          }
+          throw new Error(data.message || ('Router error: ' + data.code));
+        }
+
+        writePwaOfflineCache_(fn, args, data);
+        updatePwaOfflineBanner(false);
+
+        return data;
       }
 
-      writePwaOfflineCache_(fn, args, data);
-      updatePwaOfflineBanner(false);
-
-      return data;
+      throw lastErr || new Error('Gagal memanggil server GAS.');
     }
 
     // Shim supaya pemanggilan google.script.run.withSuccessHandler(...)
@@ -2051,10 +2094,9 @@ tbody tr:hover td { background: var(--table-th-bg); }
         syncSidebarActiveState('nav-monitoring-golive');
         document.getElementById('pageTitle').innerText    = 'Monitoring Go Live';
         document.getElementById('pageSubtitle').innerText = 'Status & tanggal go live tiap project FBB Jatim';
-        if (!monitoringGoLiveLoadedOnce) fetchMonitoringGoLiveData();
-        if (!goLiveSummaryLoadedOnce) fetchGoLiveSummary();
-        if (!goLiveRunRateLoadedOnce) fetchGoLiveRunRate();
-        if (!goLiveDailyLoadedOnce) { ensureGoLiveDailyFilterOptions_(); fetchGoLiveDaily(); }
+        // Satu request gabungan (bukan 4 request paralel) supaya tidak
+        // memicu 404 transien dari Web App GAS saat beban simultan.
+        if (!goLiveDashboardLoadedOnce) fetchGoLiveDashboard();
       } else {
         document.getElementById('page-monitoring-project').classList.add('active-page');
         syncSidebarActiveState('nav-monitoring-project');
@@ -2254,14 +2296,120 @@ tbody tr:hover td { background: var(--table-th-bg); }
       document.querySelector('.btn-refresh').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
       // true = paksa lewati cache 45 detik di server (getMonitoringProjectData),
       // supaya tombol Refresh Data selalu ambil angka paling baru dari sheet.
-      fetchMonitoringGoLiveData(true);
-      fetchGoLiveSummary(true);
-      fetchGoLiveRunRate(true);
-      fetchGoLiveDaily(true);
+      fetchGoLiveDashboard(true);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── DASHBOARD GABUNGAN MONITORING GO LIVE (1x REQUEST) ──
+    // Dulu: membuka/refresh halaman ini menembak 4 request POST
+    // terpisah nyaris bersamaan (detail, summary, run rate, daily),
+    // yang bisa memicu 404 transien dari Web App GAS saat beban
+    // simultan (lihat catatan di callGAS()). Sekarang keempatnya
+    // digabung jadi SATU panggilan ke getMonitoringGoLiveDashboard(),
+    // lalu hasilnya dipecah lagi ke masing-masing renderer yang sudah
+    // ada. Fungsi fetch per-widget di bawah (fetchMonitoringGoLiveData,
+    // fetchGoLiveSummary, fetchGoLiveRunRate, fetchGoLiveDaily) TETAP
+    // dipertahankan apa adanya untuk kasus lain (mis. ganti filter
+    // bulan/tahun di tabel harian tidak perlu re-fetch semuanya).
+    // ══════════════════════════════════════════════════════════════
+
+    let isFetchingGoLiveDashboard = false;
+    let goLiveDashboardLoadedOnce = false;
+
+    function fetchGoLiveDashboard(forceFresh) {
+      if (isFetchingGoLiveDashboard) return;
+      isFetchingGoLiveDashboard = true;
+
+      ensureGoLiveDailyFilterOptions_();
+      const monthSel = document.getElementById('glDailyMonthSelect');
+      const yearSel  = document.getElementById('glDailyYearSelect');
+      const month = monthSel ? parseInt(monthSel.value, 10) : null;
+      const year  = yearSel ? parseInt(yearSel.value, 10) : null;
+
+      const tbody = document.getElementById('gl-rows-target');
+      if (!monitoringGoLiveLoadedOnce && tbody) {
+        tbody.innerHTML = `<tr><td colspan="14" style="text-align:center; color:var(--text-muted); padding:40px 20px;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size:20px; display:block; margin-bottom:10px; opacity:0.6;"></i>
+          Memuat data Monitoring Go Live...
+        </td></tr>`;
+      }
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          isFetchingGoLiveDashboard = false;
+          goLiveDashboardLoadedOnce = true;
+
+          const btn = document.querySelector('.btn-refresh');
+          if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Refresh Data`;
+
+          if (!response || response.success === false) {
+            const msg = response && response.message;
+            renderGoLiveSummaryError_(msg);
+            renderGoLiveChartError_(msg);
+            renderGoLiveRunRateError_(msg);
+            renderGoLiveDailyError_(msg);
+            if (!monitoringGoLiveLoadedOnce && tbody) {
+              tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px 20px;color:var(--danger-color);">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:22px;opacity:0.6;display:block;margin-bottom:10px;"></i>
+                Gagal memuat data Monitoring Go Live: ${escapeHtml(msg)}
+              </td></tr>`;
+            }
+            return;
+          }
+
+          // -- Tabel detail (paginated) --
+          monitoringGoLiveLoadedOnce = true;
+          activeMonitoringGoLiveRows = response.detail || [];
+          applyMonitoringGoLiveSearchFilter(false);
+
+          // -- Rekap pivot District/Sub District + chart donut MITRA/SDI --
+          goLiveSummaryLoadedOnce = true;
+          const summary = response.summary || {};
+          renderGoLiveSummaryTable_('gl-summary-district-target', summary.byDistrict, summary.byDistrictGrandTotal, 'DISTRICT');
+          renderGoLiveSummaryTable_('gl-summary-subdistrict-target', summary.bySubDistrict, summary.bySubDistrictGrandTotal, 'SUB DISTRICT');
+          renderGoLiveBucketCharts_(summary.byDistrictGrandTotal);
+          syncAllPivotStickyHeaders_();
+
+          // -- Chart bar run rate 7 hari --
+          goLiveRunRateLoadedOnce = true;
+          renderGoLiveRunRateChart_((response.runRate && response.runRate.days) || []);
+
+          // -- Tabel harian (per bulan/tahun terpilih) --
+          if (response.daily) {
+            goLiveDailyLoadedOnce = true;
+            renderGoLiveDailyTable_('glDailyDistrictThead', 'glDailyDistrictBody', response.daily.byDistrict, response.daily.dates, 'DISTRICT');
+            renderGoLiveDailyTable_('glDailySubDistrictThead', 'glDailySubDistrictBody', response.daily.bySubDistrict, response.daily.dates, 'SUB DISTRICT');
+          }
+        })
+        .withFailureHandler(function (err) {
+          isFetchingGoLiveDashboard = false;
+          console.error('Gagal memuat dashboard Monitoring Go Live:', err.message);
+
+          const btn = document.querySelector('.btn-refresh');
+          if (btn) btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Refresh Data`;
+
+          renderGoLiveSummaryError_(err.message);
+          renderGoLiveChartError_(err.message);
+          renderGoLiveRunRateError_(err.message);
+          renderGoLiveDailyError_(err.message);
+
+          if (!monitoringGoLiveLoadedOnce && tbody) {
+            tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;padding:40px 20px;color:var(--danger-color);">
+              <i class="fa-solid fa-triangle-exclamation" style="font-size:22px;opacity:0.6;display:block;margin-bottom:10px;"></i>
+              Gagal memuat data Monitoring Go Live: ${escapeHtml(err.message)}
+            </td></tr>`;
+          }
+        })
+        .getMonitoringGoLiveDashboard(year, month, !!forceFresh);
     }
 
     // ══════════════════════════════════════════════════════════════
     // ── REKAP PIVOT GO LIVE (PER DISTRICT / SUB DISTRICT) ──
+    // Catatan: fungsi fetchGoLiveSummary/fetchGoLiveRunRate/fetchGoLiveDaily
+    // di bawah ini TIDAK lagi dipanggil otomatis saat halaman pertama
+    // dibuka (lihat switchPage() -> fetchGoLiveDashboard()). Tetap
+    // dipertahankan untuk kasus refresh per-widget yang lebih ringan,
+    // mis. applyGoLiveDailyFilter() saat user ganti bulan/tahun.
     // ══════════════════════════════════════════════════════════════
 
     function fetchGoLiveSummary(forceFresh) {

@@ -12,10 +12,19 @@
    dipaksakan). Cache "data terakhir" untuk mode offline ditangani di
    level aplikasi (lihat callGAS() di index.html), disimpan per-fn di
    localStorage -- bukan di service worker ini.
+
+   PENTING -- VERSIONING CACHE: setiap kali index.html / login.html /
+   manifest.json berubah dan di-upload ulang ke hosting statis, NAIKKAN
+   angka versi SHELL_CACHE di bawah ini (v1 -> v2 -> v3 dst). Tanpa ini,
+   strategi cache-first di fetch handler bisa membuat sebagian user
+   (terutama yang sudah pernah buka PWA-nya) tetap melihat app-shell
+   LAMA untuk sementara, walau file di server sudah baru -- activate
+   handler di bawah hanya menghapus cache dengan NAMA versi yang beda,
+   jadi menaikkan angka ini yang memicu pembersihan & fetch ulang.
    =================================================================== */
 
-const SHELL_CACHE   = 'monitoring-project-shell-v1';
-const RUNTIME_CACHE = 'monitoring-project-runtime-v1';
+const SHELL_CACHE   = 'monitoring-project-shell-v2';
+const RUNTIME_CACHE = 'monitoring-project-runtime-v2';
 
 // File yang WAJIB ada di app-shell. Path relatif terhadap lokasi sw.js
 // (taruh sw.js di root yang sama dengan index.html/login.html).

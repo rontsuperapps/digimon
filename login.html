@@ -10,7 +10,8 @@
        PWA — MANIFEST & META (samakan dengan index.html)
        ============================================================ -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icons/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="shortcut icon" href="favicon.ico">
   <meta name="theme-color" content="#07192F">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1257,7 +1258,7 @@
        kamu (Deploy > Manage deployments > Web app > URL, yang
        berakhiran "/exec"). URL ini SAMA dipakai di index.html.
        ============================================================ */
-    const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbw8vhkLbSvk0Jo_bzs3IbffCxOSBKtyNZtRY9nXE15MZJaCRL44o1FB9aQKO16DOFNY/exec';
+    const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycby6qUomlq-4uDMvCJyj2BCUR-Oope1oaCGXZgWydnWjv5FKb7qDEP3yutQ8rbAdZWu7rw/exec';
 
     // Wrapper pengganti google.script.run. Body dikirim sebagai STRING
     // JSON dengan Content-Type text/plain supaya browser tidak kirim

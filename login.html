@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>Login - DIGIMON</title>
+
+  <!-- PWA — manifest & meta (samakan dengan index.html) -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <meta name="theme-color" content="#07192F">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Infranexia">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS v4 (hasil build: npm run build:css) -->
+  <link rel="stylesheet" href="assets/app.css">
+
+  <!-- Leaflet (peta district interaktif di panel kiri) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <!-- ============================================================
+       STYLE KHUSUS HALAMAN LOGIN (peta + overlay brand)
+       Ditaruh terpisah dari assets/app.css (hasil build Tailwind)
+       supaya tidak ikut tertimpa saat kamu jalankan build ulang.
+       ============================================================ -->
+  <style>
+    #loginMap { position: absolute; inset: 0; z-index: 0; background: #0b1c33; }
+    #loginMap .leaflet-control-attribution { font-size: 9px; background: #ffffffb3; }
+
+    /* Dark mode: invert tile OSM biar senada sama tema gelap */
+    body[data-theme="dark"] #loginMap .leaflet-tile-pane {
+      filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.8);
+    }
+
+    /* Marker district: titik solid + cincin radar berputar (referensi
+       visual: peta network/migration khas AntV L7 — cincin partial yang
+       berotasi terus-menerus, bukan pulse membesar-menghilang).
+       CATATAN: icon district sekarang dikosongkan (lihat initLoginMap,
+       html: '') sesuai permintaan — hanya nama district (tooltip
+       permanen) yang ditampilkan. Style di bawah ini disimpan saja
+       kalau-kalau titik/dot ingin dimunculkan lagi nanti. */
+    .district-marker { position: relative; width: 24px; height: 24px; }
+    .district-marker-dot {
+      position: absolute; inset: 0; margin: auto;
+      width: 8px; height: 8px; border-radius: 9999px;
+      background: var(--color-brand-400, #6a8dfb);
+      border: 2px solid #fff;
+      box-shadow: 0 0 6px 1px rgba(106,141,251,.7);
+      z-index: 2;
+    }
+    /* Cincin tipis statis, penanda "radius" titik */
+    .district-marker-halo {
+      position: absolute; inset: 0; margin: auto;
+      width: 22px; height: 22px; border-radius: 9999px;
+      border: 1px solid rgba(106,141,251,.35);
+      z-index: 1;
+    }
+    /* Cincin radar: sebagian lingkaran (conic-gradient) yang berputar
+       terus — di-mask jadi outline tipis supaya menyerupai "sapuan radar". */
+    .district-marker-ring {
+      position: absolute; inset: 0; margin: auto;
+      width: 22px; height: 22px; border-radius: 9999px;
+      background: conic-gradient(from 0deg,
+        transparent 0deg,
+        var(--color-brand-400, #6a8dfb) 55deg,
+        transparent 130deg, transparent 360deg);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.2px), #000 calc(100% - 2.2px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 2.2px), #000 calc(100% - 2.2px));
+      animation: district-ring-spin 2.4s linear infinite;
+      opacity: .9;
+      z-index: 1;
+    }
+    @keyframes district-ring-spin { to { transform: rotate(360deg); } }
+    .district-tooltip {
+      background: #0b1c33; color: #fff; border: none;
+      font-family: "Outfit", sans-serif; font-size: 11.5px; font-weight: 500;
+      padding: 3px 9px; border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.25);
+      transition: background-color .2s ease, color .2s ease;
+    }
+    .district-tooltip::before { display: none; }
+    /* Dark mode: tile peta di-invert jadi gelap (lihat filter di
+       #loginMap .leaflet-tile-pane di bawah), jadi label navy pekat
+       kurang kontras. Dark mode pakai aksen brand terang + teks gelap
+       supaya tetap menonjol di atas peta gelap. */
+    body[data-theme="dark"] .district-tooltip {
+      background: var(--color-brand-400, #6a8dfb);
+      color: #07192f;
+      box-shadow: 0 2px 8px rgba(0,0,0,.45);
+    }
+
+    /* ============================================================
+       GARIS KONEKSI HUB -> DISTRICT — versi melengkung (arc) dengan
+       efek "energi mengalir" yang lebih halus (glow + dash panjang),
+       menggantikan garis lurus dash-kecil sebelumnya yang terlihat kaku.
+       Dirender sebagai 2 layer per garis:
+       1) .district-link-base  = jalur redup, selalu terlihat (guide line)
+       2) .district-link-flow  = dash bercahaya yang bergerak sepanjang
+                                  jalur, memberi kesan data mengalir dari
+                                  NOC ke tiap district.
+       ============================================================ */
+    .district-link-base {
+      fill: none;
+      stroke: var(--color-brand-400, #6a8dfb);
+      stroke-linecap: round;
+      opacity: .28;
+      transition: opacity .2s ease, stroke-width .2s ease;
+    }
+    .district-link-flow {
+      fill: none;
+      stroke: var(--color-brand-400, #6a8dfb);
+      stroke-linecap: round;
+      stroke-dasharray: 5 46;
+      filter: drop-shadow(0 0 3px rgba(106,141,251,.9));
+      animation: district-link-flow 2.8s linear infinite;
+      transition: opacity .2s ease, stroke-width .2s ease;
+    }
+    @keyframes district-link-flow {
+      to { stroke-dashoffset: -510; }
+    }
+    body[data-theme="dark"] .district-link-base,
+    body[data-theme="dark"] .district-link-flow { stroke: var(--color-brand-300, #9db3fc); }
+
+    /* Marker hub (NOC) — sedikit lebih besar, warna beda, cincin radar
+       berputar arah sebaliknya supaya terasa jadi "pusat sinyal". */
+    .hub-marker { position: relative; width: 30px; height: 30px; }
+    .hub-marker-dot {
+      position: absolute; inset: 0; margin: auto;
+      width: 11px; height: 11px; border-radius: 9999px;
+      background: #df1d26;
+      border: 2px solid #fff;
+      box-shadow: 0 0 7px 1px rgba(223,29,38,.7);
+      z-index: 2;
+    }
+    .hub-marker-halo {
+      position: absolute; inset: 0; margin: auto;
+      width: 28px; height: 28px; border-radius: 9999px;
+      border: 1px solid rgba(223,29,38,.35);
+      z-index: 1;
+    }
+    .hub-marker-ring {
+      position: absolute; inset: 0; margin: auto;
+      width: 28px; height: 28px; border-radius: 9999px;
+      background: conic-gradient(from 0deg,
+        transparent 0deg, #df1d26 70deg,
+        transparent 160deg, transparent 360deg);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.4px), #000 calc(100% - 2.4px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 2.4px), #000 calc(100% - 2.4px));
+      animation: district-ring-spin 3.2s linear infinite reverse;
+      opacity: .9;
+      z-index: 1;
+    }
+
+    /* Kartu overlay brand di atas peta — dibuat TERANG (bukan gelap)
+       supaya logo asli (teks hitam) tetap terbaca jelas. */
+    .map-overlay {
+      position: absolute;
+      z-index: 10;
+      max-width: 280px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(15, 23, 42, .07);
+      box-shadow: 0 10px 30px rgba(7, 25, 47, .18);
+      pointer-events: none;
+      font-family: "Outfit", sans-serif;
+    }
+    .map-overlay--top { top: 24px; left: 24px; }
+    .map-overlay--bottom {
+      bottom: 24px; left: 24px;
+      display: flex; flex-wrap: wrap;
+      gap: 5px 14px;
+      max-width: calc(100% - 48px);
+      padding: 10px 14px;
+    }
+    .map-overlay-subtitle {
+      font-size: 10px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: .16em; color: #667085; margin-top: 8px;
+    }
+    .map-overlay-desc { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #475467; }
+    .map-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #344054; }
+    .map-legend-dot { width: 6px; height: 6px; border-radius: 50%; background: #2c3979; flex-shrink: 0; }
+
+    /* Dark mode untuk badge overlay peta (top & bottom) — sebelumnya
+       selalu terang walau tema sudah gelap. Logo infraNexia (teks
+       hitam) dibungkus chip putih terpisah supaya tetap kebaca tanpa
+       perlu file logo versi terang/gelap. */
+    body[data-theme="dark"] .map-overlay {
+      background: rgba(13, 27, 49, 0.88);
+      border-color: rgba(255, 255, 255, .08);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    }
+    body[data-theme="dark"] .map-overlay-subtitle { color: #8b9dc3; }
+    body[data-theme="dark"] .map-overlay-desc { color: #cbd5e1; }
+    body[data-theme="dark"] .map-legend-item { color: #e2e8f0; }
+    body[data-theme="dark"] .map-legend-dot { background: var(--color-brand-400, #6a8dfb); }
+
+    /* ============================================================
+       MOTIF DIAGONAL (merah/biru/abu-abu) — terinspirasi garis
+       diagonal pada logo Infranexia. Ditulis manual (bukan class
+       Tailwind arbitrary) karena kombinasi warna ini tidak ada di
+       app.css.
+       ============================================================ */
+    .form-decor-chevrons {
+      position: absolute;
+      right: -70px;
+      bottom: -50px;
+      width: 260px;
+      height: 260px;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .form-decor-chevrons span {
+      position: absolute;
+      top: 0;
+      width: 46px;
+      height: 240px;
+      border-radius: 8px;
+      transform: rotate(-24deg);
+    }
+    .form-decor-chevrons span:nth-child(1) { left: 30px;  background: #df1d26; opacity: .09; }
+    .form-decor-chevrons span:nth-child(2) { left: 90px;  background: #2c3979; opacity: .09; }
+    .form-decor-chevrons span:nth-child(3) { left: 150px; background: #bdbec0; opacity: .09; }
+    body[data-theme="dark"] .form-decor-chevrons span { opacity: .16; }
+
+    /* ============================================================
+       LAYOUT LOGIN — PETA FULL-BLEED (desktop) + FORM MENGAMBANG
+       DI KANAN
+       Sebelumnya split 2 kolom sama besar (grid lg:grid-cols-2).
+       Sekarang peta mengisi SELURUH layar (>=1024px), dan form
+       login jadi kartu yang mengambang di sisi kanan di atasnya.
+       Ditulis manual (bukan class Tailwind) karena butuh warna &
+       shadow spesifik yang tidak ada di assets/app.css.
+       Di mobile (<1024px) perilaku TIDAK berubah: peta tetap
+       disembunyikan, form tetap di tengah layar seperti sebelumnya.
+       ============================================================ */
+    .login-form-col {
+      position: relative;
+      z-index: 10;
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (min-width: 1024px) {
+      .login-form-col { justify-content: flex-end; }
+      #loginCard { margin-right: clamp(24px, 6vw, 96px); }
+    }
+
+    /* Kartu form login — PUTIH SOLID (bukan transparan), supaya
+       kontras tegas dari peta di belakangnya dan logo DIGIMON di
+       dalamnya selalu kebaca jelas, terkesan modern & simple. */
+    #loginCard {
+      background: var(--color-white);
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-2xl);
+      max-width: 400px;
+      padding: 28px 28px;
+      box-shadow: var(--shadow-theme-xl);
+    }
+    @media (min-width: 640px) {
+      #loginCard { padding: 32px 36px; }
+    }
+    body[data-theme="dark"] #loginCard {
+      background: var(--color-gray-dark);
+      border-color: var(--color-gray-800);
+    }
+
+    /* ============================================================
+       UTILITY TAMBAHAN — belum ada di assets/app.css
+       app.css adalah hasil BUILD STATIS (npm run build:css), jadi
+       class baru yang dipakai di sini TIDAK otomatis punya CSS
+       sampai kamu build ulang. Supaya halaman ini tidak patah
+       sebelum sempat rebuild, class yang dipakai di bawah didefinisikan
+       manual di sini dengan nilai IDENTIK skala Tailwind (--spacing =
+       4px). Kalau nanti kamu jalankan build ulang, class asli akan
+       ter-generate juga dengan nilai yang sama persis — aman, tidak
+       bentrok.
+       ============================================================ */
+    .mb-6 { margin-bottom: calc(var(--spacing, .25rem) * 6); }
+    .mt-6 { margin-top: calc(var(--spacing, .25rem) * 6); }
+    .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: calc(var(--spacing, .25rem) * 4);
+    }
+    .text-title-xs { font-size: var(--text-title-xs, 24px); line-height: var(--text-title-xs--line-height, 32px); }
+
+    /* ============================================================
+       POP UP NOTIFIKASI LOGIN -- pengganti kotak .alert-box inline.
+       Ditulis manual (bukan class Tailwind) supaya tidak perlu build
+       ulang assets/app.css. Dark mode mengikuti body[data-theme].
+       ============================================================ */
+    .login-notif-overlay {
+      position: fixed; inset: 0; z-index: 100000;
+      display: none; align-items: center; justify-content: center;
+      padding: 16px; overflow-y: auto;
+      background: rgba(152, 162, 179, .5);
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    }
+    .login-notif-overlay.show { display: flex; }
+    .login-notif-overlay.is-success { --n-color: #12b76a; }
+    .login-notif-overlay.is-error   { --n-color: #f04438; }
+    .login-notif-overlay.is-warning { --n-color: #f79009; }
+    .login-notif-overlay.is-info    { --n-color: #0ba5ec; }
+    .login-notif-card {
+      width: 100%; max-width: 380px; text-align: center;
+      padding: 28px 24px 22px;
+      background: var(--color-white, #fff);
+      border: 1px solid var(--color-gray-200, #e4e7ec);
+      border-radius: 16px;
+      box-shadow: var(--shadow-theme-xl, 0 20px 24px -4px rgba(16,24,40,.08));
+    }
+    body[data-theme="dark"] .login-notif-card {
+      background: var(--color-gray-dark, #1a2231);
+      border-color: var(--color-gray-800, #1d2939);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .login-notif-overlay.show .login-notif-card { animation: loginNotifIn .18s ease-out; }
+      @keyframes loginNotifIn { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+    }
+    .login-notif-icon {
+      width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 9999px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--n-color, #0ba5ec);
+      background: color-mix(in srgb, var(--n-color, #0ba5ec) 15%, transparent);
+    }
+    .login-notif-icon svg { width: 26px; height: 26px; }
+    .login-notif-title { font-size: 16px; font-weight: 600; color: var(--color-gray-800, #1d2939); }
+    body[data-theme="dark"] .login-notif-title { color: rgba(255,255,255,.9); }
+    .login-notif-msg {
+      margin-top: 6px; font-size: 13px; line-height: 1.5; white-space: pre-line;
+      color: var(--color-gray-500, #667085);
+    }
+    body[data-theme="dark"] .login-notif-msg { color: var(--color-gray-400, #98a2b3); }
+    .login-notif-btn {
+      margin-top: 18px; width: 100%; padding: 10px 16px; border: 0; border-radius: 10px; cursor: pointer;
+      font: inherit; font-size: 14px; font-weight: 500; color: #fff;
+      background: var(--color-brand-500, #2c3979);
+    }
+    .login-notif-btn:hover { background: var(--color-brand-600, #212c5e); }
+    .login-notif-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-brand-500, #2c3979) 35%, transparent); outline-offset: 2px; }
+    .login-notif-spinner {
+      display: none; width: 22px; height: 22px; margin: 16px auto 0;
+      border: 3px solid color-mix(in srgb, var(--n-color, #12b76a) 25%, transparent);
+      border-top-color: var(--n-color, #12b76a); border-radius: 9999px;
+      animation: loginNotifSpin .8s linear infinite;
+    }
+    .login-notif-overlay.is-success .login-notif-spinner { display: block; }
+    @keyframes loginNotifSpin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body data-theme="light">
+
+  <!-- Container scroll sendiri: <body> di app.css dikunci h-screen/overflow-hidden untuk dashboard -->
+  <div class="fixed inset-0 overflow-y-auto bg-white dark:bg-gray-900">
+
+    <!-- ══════════ PANEL PETA DISTRICT (desktop) — FULL-BLEED ══════════
+         Mengisi SELURUH layar (bukan cuma setengah lagi) mulai
+         breakpoint lg. Form login (di bawah) mengambang di atasnya,
+         digeser ke kanan. Di mobile tetap tidak tampil, sama seperti
+         sebelumnya. ══════════ -->
+    <aside class="login-panel absolute inset-0 hidden overflow-hidden lg:flex" aria-hidden="true">
+
+      <!-- Peta Leaflet mengisi seluruh panel -->
+      <div id="loginMap"></div>
+
+      <!-- Overlay brand, mengambang di atas peta -->
+      <div class="map-overlay map-overlay--top">
+        <img id="infranexiaLogo" src="icons/logo-infranexia-light.png"
+             data-src-light="icons/logo-infranexia-light.png"
+             data-src-dark="icons/logo-infranexia-dark.png"
+             onerror="this.onerror=null;this.src=this.dataset.srcDark;"
+             alt="Infranexia" style="height:38px;width:auto;display:block">
+        <div class="map-overlay-subtitle">AREA 3 · REGION JAWA TIMUR</div>
+        <p class="map-overlay-desc">Pantau progres Go Live secara langsung di setiap district.</p>
+      </div>
+
+      <!-- Legend district, di bagian bawah panel -->
+      <div class="map-overlay map-overlay--bottom">
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Suramadu</span>
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Lamongan</span>
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Madiun</span>
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Sidoarjo</span>
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Malang</span>
+        <span class="map-legend-item"><span class="map-legend-dot"></span>Jember</span>
+      </div>
+    </aside>
+
+    <!-- ══════════ KOLOM FORM — mengambang di kanan (desktop), tengah (mobile) ══════════ -->
+    <main class="login-form-col relative overflow-hidden px-5 py-10 sm:px-8">
+
+      <!-- Motif diagonal (merah/biru/abu-abu) khas logo Infranexia -->
+      <div class="form-decor-chevrons" aria-hidden="true"><span></span><span></span><span></span></div>
+
+      <section class="relative w-full" id="loginCard">
+
+        <!-- Brand DIGIMON, selalu tampil di atas form (desktop & mobile).
+             Logo dual-mode: logo-digimon-light.png (teks navy, dipakai
+             saat tema terang) & logo-digimon-dark.png (teks putih asli,
+             dipakai saat tema gelap) — ditukar otomatis lewat
+             applyDigimonLogoForTheme() di bawah setiap toggleLoginTheme(). -->
+        <div class="mb-4 flex justify-center">
+          <img id="digimonLogo" src="icons/logo-digimon-light.png"
+               data-src-light="icons/logo-digimon-light.png"
+               data-src-dark="icons/logo-digimon-dark.png"
+               onerror="this.onerror=null;this.src=this.dataset.srcDark;"
+               alt="DIGIMON" style="height:48px;width:auto;display:block">
+        </div>
+
+          <div class="mb-5">
+            <h1 class="mb-1 text-title-xs font-semibold text-gray-800 dark:text-white/90">Selamat datang</h1>
+            <p class="text-theme-sm text-gray-500 dark:text-gray-400">Masuk untuk mengakses dashboard operasional dan monitoring project.</p>
+          </div>
+
+          <form onsubmit="doLogin(event); return false;" novalidate class="space-y-4">
+            <div>
+              <label for="inputUsername" class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">Username</label>
+              <input id="inputUsername" class="auth-input" type="text" autocomplete="username" placeholder="Masukkan username" spellcheck="false">
+            </div>
+
+            <div>
+              <label for="inputPassword" class="mb-1.5 block text-theme-sm font-medium text-gray-700 dark:text-gray-400">Password</label>
+              <div class="relative">
+                <input id="inputPassword" class="auth-input pr-12" type="password" autocomplete="current-password" placeholder="Masukkan password">
+                <button type="button" id="togglePasswordBtn" onclick="togglePassword()" aria-label="Tampilkan password" title="Tampilkan/Sembunyikan Password"
+                        class="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  <svg id="eyeOpen" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block">
+                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg id="eyeClosed" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                    <path d="M3 3l18 18"></path><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.7 17.7 0 0 1-3.2 4.1"></path><path d="M6.4 6.4A17.5 17.5 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <label class="flex cursor-pointer select-none items-center gap-2.5 text-theme-sm text-gray-700 dark:text-gray-400">
+                <input type="checkbox" id="rememberMe" class="size-4.5 rounded border-gray-300 text-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:ring-offset-0 dark:border-gray-600 dark:bg-gray-900">
+                <span>Ingat username</span>
+              </label>
+              <span class="inline-flex items-center gap-1.5 text-theme-xs text-gray-400">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                Secure Access
+              </span>
+            </div>
+
+            <button type="submit" id="btnLogin"
+                    class="relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-lg bg-brand-500 px-5 text-theme-sm font-medium text-white shadow-theme-xs transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70">
+              <span id="btnSpinner" class="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" style="display:none"></span>
+              <span id="btnText">Masuk ke Dashboard</span>
+              <svg id="btnArrow" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+            </button>
+          </form>
+
+          <p class="mt-6 text-center text-theme-xs text-gray-400"><span class="font-medium text-gray-500 dark:text-gray-400">DIGIMON</span> &nbsp;·&nbsp; © 2026</p>
+        </section>
+    </main>
+  </div>
+
+  <!-- Toggle tema terang/gelap (tampilan awal selalu terang, tidak disimpan) -->
+  <button type="button" id="themeToggleBtn" onclick="toggleLoginTheme()" title="Ganti Tema" aria-label="Ganti tema terang/gelap"
+          class="fixed right-5 bottom-5 z-50 flex size-12 items-center justify-center rounded-full bg-brand-500 text-white shadow-theme-lg transition-colors hover:bg-brand-600 dark:bg-brand-500">
+    <svg id="loginThemeIconMoon" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg>
+    <svg id="loginThemeIconSun" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+  </button>
+
+  <!-- Pop up notifikasi (pengganti kotak alert inline di kartu login) -->
+  <div id="loginNotifOverlay" class="login-notif-overlay" role="alertdialog" aria-modal="true" aria-labelledby="loginNotifTitle" aria-describedby="loginNotifMsg">
+    <div class="login-notif-card">
+      <div class="login-notif-icon" id="loginNotifIcon"></div>
+      <div class="login-notif-title" id="loginNotifTitle">-</div>
+      <p class="login-notif-msg" id="loginNotifMsg">-</p>
+      <div class="login-notif-spinner" aria-hidden="true"></div>
+      <button type="button" class="login-notif-btn" id="loginNotifBtn" onclick="hideAlert()">OK</button>
+    </div>
+  </div>
+
+  <!-- Leaflet JS (peta district) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    /* ============================================================
+       MIGRASI PWA — KONFIGURASI API GAS
+       ============================================================
+       Ganti GAS_EXEC_URL di bawah dengan URL deployment Web App GAS
+       kamu (Deploy > Manage deployments > Web app > URL, yang
+       berakhiran "/exec"). URL ini SAMA dipakai di index.html.
+       ============================================================ */
+    const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycby6qUomlq-4uDMvCJyj2BCUR-Oope1oaCGXZgWydnWjv5FKb7qDEP3yutQ8rbAdZWu7rw/exec';
+
+    // Wrapper pengganti google.script.run. Body dikirim sebagai STRING
+    // JSON dengan Content-Type text/plain supaya browser tidak kirim
+    // CORS preflight (GAS tidak bisa merespons preflight OPTIONS).
+    async function callGAS(fn, args) {
+      const res = await fetch(GAS_EXEC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: fn, args: args || [] })
+      });
+
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status + ' dari server GAS.');
+      }
+
+      return res.json();
+    }
+
+    /* ============================================================
+       UI HELPERS
+       ============================================================ */
+
+    function togglePassword() {
+      const input = document.getElementById('inputPassword');
+      const openIcon = document.getElementById('eyeOpen');
+      const closedIcon = document.getElementById('eyeClosed');
+      const btn = document.getElementById('togglePasswordBtn');
+
+      const isPassword = input.type === 'password';
+
+      input.type = isPassword ? 'text' : 'password';
+      openIcon.style.display = isPassword ? 'none' : 'block';
+      closedIcon.style.display = isPassword ? 'block' : 'none';
+
+      btn.setAttribute(
+        'aria-label',
+        isPassword ? 'Sembunyikan password' : 'Tampilkan password'
+      );
+    }
+
+
+    // Pop up notifikasi login. type: 'success' | 'error' | 'warning' | 'info'.
+    // 'success' = pop up "Mengalihkan..." tanpa tombol (halaman segera
+    // pindah ke dashboard). onClose (opsional) jalan saat pop up ditutup
+    // user -- dipakai untuk mengembalikan fokus ke kolom yang relevan.
+    const LOGIN_NOTIF_ICONS_ = {
+      success: '<circle cx="12" cy="12" r="9"></circle><path d="m8 12.3 2.7 2.7L16 9.3"></path>',
+      error:   '<circle cx="12" cy="12" r="9"></circle><path d="m9.5 9.5 5 5"></path><path d="m14.5 9.5-5 5"></path>',
+      warning: '<path d="M10.3 4.2 2.9 17a2 2 0 0 0 1.7 3h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"></path><path d="M12 9.5v4"></path><path d="M12 17h.01"></path>',
+      info:    '<circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path>'
+    };
+    const LOGIN_NOTIF_TITLES_ = { success: 'Berhasil', error: 'Terjadi Kesalahan', warning: 'Perhatian', info: 'Informasi' };
+    let loginNotifOnClose_ = null;
+
+    function showAlert(type, message, title, onClose) {
+      if (!LOGIN_NOTIF_ICONS_[type]) type = 'info';
+      const overlay = document.getElementById('loginNotifOverlay');
+      const btn     = document.getElementById('loginNotifBtn');
+
+      loginNotifOnClose_ = (typeof onClose === 'function' && type !== 'success') ? onClose : null;
+      overlay.className = 'login-notif-overlay show is-' + type;
+      document.getElementById('loginNotifIcon').innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' + LOGIN_NOTIF_ICONS_[type] + '</svg>';
+      document.getElementById('loginNotifTitle').textContent = title || LOGIN_NOTIF_TITLES_[type];
+      document.getElementById('loginNotifMsg').textContent   = message || '';
+
+      btn.style.display = (type === 'success') ? 'none' : '';
+      if (type !== 'success') btn.focus();
+    }
+
+
+    function hideAlert() {
+      const overlay = document.getElementById('loginNotifOverlay');
+      const wasOpen = overlay.classList.contains('show');
+      overlay.className = 'login-notif-overlay';
+
+      const cb = loginNotifOnClose_;
+      loginNotifOnClose_ = null;
+      if (wasOpen && cb) { try { cb(); } catch (e) { console.error(e); } }
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      const overlay = document.getElementById('loginNotifOverlay');
+      if (overlay.classList.contains('show') && !overlay.classList.contains('is-success')) {
+        e.preventDefault();
+        hideAlert();
+      }
+    });
+
+
+    function addRipple(btn, event) {
+      if (!btn || !event) return;
+
+      const rect = btn.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (event.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (event.clientY - rect.top - size / 2) + 'px';
+
+      btn.appendChild(ripple);
+
+      setTimeout(function() {
+        ripple.remove();
+      }, 700);
+    }
+
+
+    /* ============================================================
+       TOGGLE TEMA TERANG/GELAP
+       Tampilan awal SELALU light (tidak disimpan ke localStorage),
+       sesuai permintaan. Ikon menunjukkan mode tujuan saat diklik.
+       ============================================================ */
+    function toggleLoginTheme() {
+      const body = document.body;
+      const iconSun = document.getElementById('loginThemeIconSun');
+      const iconMoon = document.getElementById('loginThemeIconMoon');
+
+      if (body.getAttribute('data-theme') === 'dark') {
+        body.setAttribute('data-theme', 'light');
+        iconSun.style.display = 'none';
+        iconMoon.style.display = 'block';
+        applyLogosForTheme('light');
+      } else {
+        body.setAttribute('data-theme', 'dark');
+        iconSun.style.display = 'block';
+        iconMoon.style.display = 'none';
+        applyLogosForTheme('dark');
+      }
+    }
+
+    // Tukar semua logo dual-mode (DIGIMON di form, infraNexia di
+    // overlay peta) sesuai tema aktif. Aman dipanggil kapan saja —
+    // kalau file versi tertentu belum diupload, <img onerror> di HTML
+    // otomatis fallback ke versi dark supaya tidak pernah kosong.
+    function applyLogosForTheme(theme) {
+      ['digimonLogo', 'infranexiaLogo'].forEach(function (id) {
+        const img = document.getElementById(id);
+        if (!img) return;
+        const src = theme === 'dark' ? img.dataset.srcDark : img.dataset.srcLight;
+        if (src) img.src = src;
+      });
+    }
+
+
+    /* ============================================================
+       PETA DISTRICT (panel kiri, desktop)
+       Hanya di-init di layar >=1024px (breakpoint 'lg') supaya tidak
+       memboroskan tile request di mobile, karena panel ini memang
+       disembunyikan (hidden lg:block) di layar kecil.
+       Catatan: tile OSM butuh koneksi internet — tidak ikut ter-cache
+       oleh sw.js (yang hanya cache app-shell), jadi kalau device
+       offline peta tidak akan muncul walau form login tetap jalan.
+       ============================================================ */
+
+    let loginMap = null;
+    let loginMapBounds = null; // disimpan supaya bisa re-fit saat resize
+
+    const DISTRICT_MARKERS = [
+      { name: 'Suramadu', lat: -7.334766, lng: 112.724391 },
+      { name: 'Lamongan', lat: -7.120873, lng: 112.566203 },
+      { name: 'Madiun',   lat: -7.627721, lng: 111.520189 },
+      { name: 'Sidoarjo', lat: -7.448807, lng: 112.717775 },
+      { name: 'Malang',   lat: -7.955166, lng: 112.638130 },
+      { name: 'Jember',   lat: -8.174740, lng: 113.693352 }
+    ];
+
+    // Pusat "NOC" — titik asal garis koneksi animasi ke tiap district
+    // (kira-kira di Surabaya, sesuai cakupan Area 3 Jawa Timur).
+    const HUB_CENTER = { lat: -7.2575, lng: 112.7521 };
+
+    // ------------------------------------------------------------
+    // ARC PATH — menghasilkan rangkaian titik lengkung (quadratic
+    // bezier) antara 2 koordinat, dipakai supaya garis koneksi tidak
+    // lurus kaku, tapi melengkung seperti visual flight-route/network.
+    // curveFactor mengatur seberapa besar lengkungannya relatif jarak
+    // titik awal-akhir; arah lengkung dibuat konsisten (searah) supaya
+    // semua garis "mekar" dari hub dengan gaya yang seragam.
+    // ------------------------------------------------------------
+    function arcPoints(from, to, curveFactor, segments) {
+      curveFactor = curveFactor || 0.18;
+      segments = segments || 48;
+
+      const lat1 = from.lat, lng1 = from.lng;
+      const lat2 = to.lat, lng2 = to.lng;
+
+      const midLat = (lat1 + lat2) / 2;
+      const midLng = (lng1 + lng2) / 2;
+
+      const dLat = lat2 - lat1;
+      const dLng = lng2 - lng1;
+
+      // Titik kontrol bezier: digeser tegak lurus terhadap garis
+      // hub->district sejauh curveFactor * panjang garis.
+      const ctrlLat = midLat + (-dLng) * curveFactor;
+      const ctrlLng = midLng + (dLat) * curveFactor;
+
+      const pts = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const mt = 1 - t;
+        const lat = mt * mt * lat1 + 2 * mt * t * ctrlLat + t * t * lat2;
+        const lng = mt * mt * lng1 + 2 * mt * t * ctrlLng + t * t * lng2;
+        pts.push([lat, lng]);
+      }
+      return pts;
+    }
+
+    // ------------------------------------------------------------
+    // PADDING ASIMETRIS UNTUK fitBounds
+    // Kartu form (#loginCard) mengambang di KANAN peta (lihat CSS
+    // .login-form-col & #loginCard). Kalau fitBounds pakai padding
+    // simetris, titik district di sisi kanan bisa tertutup kartu.
+    // Di sini padding sisi kanan dihitung dinamis dari lebar kartu
+    // + margin-right aktualnya (termasuk clamp() di CSS), plus sedikit
+    // ruang napas tambahan.
+    // ------------------------------------------------------------
+    function computeMapPadding() {
+      const card = document.getElementById('loginCard');
+      let rightPad = 48;
+
+      if (card) {
+        const cardWidth = card.offsetWidth || 400;
+        const marginRight = parseFloat(window.getComputedStyle(card).marginRight) || 64;
+        rightPad = cardWidth + marginRight + 40; // +40px ruang napas
+      }
+
+      return {
+        paddingTopLeft: [48, 48],
+        paddingBottomRight: [rightPad, 48]
+      };
+    }
+
+    function fitLoginMapBounds() {
+      if (!loginMap || !loginMapBounds) return;
+      const pad = computeMapPadding();
+      loginMap.fitBounds(loginMapBounds, pad);
+    }
+
+    function initLoginMap() {
+      const mapEl = document.getElementById('loginMap');
+      if (!mapEl || loginMap || typeof L === 'undefined') return;
+
+      loginMap = L.map('loginMap', {
+        zoomControl: false,
+        attributionControl: true,
+        scrollWheelZoom: false
+      }).setView([-7.6, 112.9], 8);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(loginMap);
+
+      const bounds = [[HUB_CENTER.lat, HUB_CENTER.lng]];
+      const districtLines = {};
+
+      // Garis koneksi hub -> district, digambar melengkung (arc) dan
+      // duluan supaya berada DI BAWAH marker. Tiap garis terdiri dari
+      // 2 layer: base (redup, selalu tampil) + flow (dash bercahaya
+      // yang bergerak, kesan "data mengalir").
+      //
+      // PENTING: seluruh titik sepanjang kurva (pts) ikut dimasukkan ke
+      // `bounds`, bukan cuma titik awal/akhir. Kalau cuma endpoint yang
+      // dipakai, fitBounds bisa menghasilkan area render yang lebih
+      // sempit dari lengkungan aslinya -> bagian tengah kurva yang
+      // menggembung keluar area tsb jadi TERPOTONG oleh SVG renderer
+      // Leaflet (terlihat seperti garis tidak sampai ke titik district).
+      DISTRICT_MARKERS.forEach(function (d) {
+        const pts = arcPoints(HUB_CENTER, d);
+        pts.forEach(function (p) { bounds.push(p); });
+
+        const baseLine = L.polyline(pts, {
+          className: 'district-link-base',
+          weight: 1.4,
+          interactive: false
+        }).addTo(loginMap);
+
+        const flowLine = L.polyline(pts, {
+          className: 'district-link-flow',
+          weight: 2,
+          interactive: false
+        }).addTo(loginMap);
+
+        districtLines[d.name] = { base: baseLine, flow: flowLine };
+      });
+
+      // Marker hub (NOC) — titik pusat, sedikit lebih besar dari marker district.
+      const hubIcon = L.divIcon({
+        className: 'hub-marker',
+        html: '<span class="hub-marker-ring"></span><span class="hub-marker-halo"></span><span class="hub-marker-dot"></span>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+      L.marker([HUB_CENTER.lat, HUB_CENTER.lng], { icon: hubIcon })
+        .addTo(loginMap)
+        .bindTooltip('NOC · Command Center', { direction: 'top', offset: [0, -8], className: 'district-tooltip' });
+
+      DISTRICT_MARKERS.forEach(function (d) {
+        // Icon dikosongkan (tidak ada dot/halo/ring) sesuai permintaan —
+        // cukup nama district (tooltip permanen) yang ditampilkan.
+        // iconSize/iconAnchor tetap dipertahankan supaya area hover untuk
+        // menyalakan garis koneksi (lihat marker.on('mouseover', ...))
+        // tetap berfungsi sama seperti sebelumnya.
+        const icon = L.divIcon({
+          className: 'district-marker',
+          html: '',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([d.lat, d.lng], { icon: icon })
+          .addTo(loginMap)
+          .bindTooltip(d.name, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -8],
+            className: 'district-tooltip'
+          });
+
+        // Interaktif: hover marker district -> garis koneksinya menyala.
+        const lines = districtLines[d.name];
+        marker.on('mouseover', function () {
+          if (!lines) return;
+          lines.base.setStyle({ opacity: .6, weight: 2 });
+          lines.flow.setStyle({ opacity: 1, weight: 3 });
+        });
+        marker.on('mouseout', function () {
+          if (!lines) return;
+          lines.base.setStyle({ opacity: .28, weight: 1.4 });
+          lines.flow.setStyle({ opacity: 1, weight: 2 });
+        });
+
+        bounds.push([d.lat, d.lng]);
+      });
+
+      loginMapBounds = bounds;
+      fitLoginMapBounds();
+    }
+
+    function handleMapVisibility() {
+      const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+
+      if (isDesktop) {
+        initLoginMap();
+        if (loginMap) {
+          // Container baru kelihatan / berubah ukuran -> paksa Leaflet
+          // menghitung ulang dimensinya, kalau tidak tile-nya bisa
+          // kepotong/abu-abu. Setelah itu re-fit bounds dengan padding
+          // asimetris terbaru (lebar kartu bisa berubah saat resize).
+          setTimeout(function () {
+            loginMap.invalidateSize();
+            fitLoginMapBounds();
+          }, 200);
+        }
+      }
+    }
+
+    window.addEventListener('resize', handleMapVisibility);
+
+
+    /* ============================================================
+       LOGIN SYSTEM
+       Dipertahankan kompatibel dengan Google Apps Script Anda.
+       ============================================================ */
+
+    let isSubmitting = false;
+
+    function doLogin(e) {
+      if (e) {
+        e.preventDefault();
+      }
+
+      if (isSubmitting) return;
+
+      if (e) {
+        addRipple(document.getElementById('btnLogin'), e);
+      }
+
+      // hideAlert() di sini sengaja TANPA memicu onClose (callback fokus):
+      // user sedang submit ulang, fokus tidak perlu dipindah.
+      loginNotifOnClose_ = null;
+      hideAlert();
+
+      const username = document.getElementById('inputUsername').value.trim();
+      const password = document.getElementById('inputPassword').value.trim();
+
+      if (!username || !password) {
+        showAlert('warning', 'Username dan password tidak boleh kosong.', 'Data Belum Lengkap', function () {
+          document.getElementById(!username ? 'inputUsername' : 'inputPassword').focus();
+        });
+        shakeCard();
+        return;
+      }
+
+      isSubmitting = true;
+      setLoading(true);
+
+      callGAS('validateLogin', [username, password])
+        .then(function(result) {
+          setLoading(false);
+
+          if (result.success) {
+            showAlert('success', 'Mengalihkan ke dashboard...', 'Login Berhasil');
+
+            if (document.getElementById('rememberMe').checked) {
+              localStorage.setItem('nimon_user', username);
+            } else {
+              localStorage.removeItem('nimon_user');
+            }
+
+            // Token sesi disimpan di localStorage. index.html membacanya
+            // balik dari sini di setiap panggilan API.
+            localStorage.setItem('monproj_session_token', result.token);
+
+            setTimeout(function() {
+              // Dulu: window.top.location.href = result.redirectUrl
+              // (perlu window.top karena GAS berjalan di iframe sandbox).
+              // Sekarang halaman ini bukan iframe lagi -- redirect biasa
+              // ke halaman dashboard statis (ganti nama file di bawah
+              // kalau dashboard-mu tidak bernama index.html).
+              // AUDIT PERFORMA: delay diturunkan dari 800ms -> 300ms.
+              // 300ms masih cukup untuk toast "Login berhasil" sempat
+              // terlihat sekilas, tapi tidak menambah setengah detik lebih
+              // ke waktu tunggu total user sebelum dashboard mulai memuat.
+              window.location.href = 'index.html';
+            }, 300);
+
+          } else {
+            isSubmitting = false;
+            showAlert(
+              'error',
+              result.message || 'Username atau password salah.',
+              'Login Gagal',
+              function () {
+                const pw = document.getElementById('inputPassword');
+                pw.focus();
+                pw.select();
+              }
+            );
+            shakeCard();
+          }
+        })
+        .catch(function(err) {
+          isSubmitting = false;
+          setLoading(false);
+
+          showAlert(
+            'error',
+            'Gagal terhubung ke server. Coba lagi.',
+            'Tidak Bisa Terhubung'
+          );
+
+          shakeCard();
+          console.error('Login error:', err);
+        });
+    }
+
+
+    function setLoading(on) {
+      const btn = document.getElementById('btnLogin');
+      const spinner = document.getElementById('btnSpinner');
+      const text = document.getElementById('btnText');
+      const arrow = document.getElementById('btnArrow');
+
+      btn.disabled = on;
+      spinner.style.display = on ? 'block' : 'none';
+      arrow.style.display = on ? 'none' : 'block';
+      text.textContent = on ? 'Memeriksa akses...' : 'Masuk ke Dashboard';
+    }
+
+
+    function shakeCard() {
+      const card = document.getElementById('loginCard');
+
+      card.classList.remove('card-shake');
+      void card.offsetWidth;
+      card.classList.add('card-shake');
+    }
+
+
+    /* ============================================================
+       PREFILL REMEMBER USERNAME
+       ============================================================ */
+
+    // PWA — daftarkan service worker juga dari halaman login, supaya
+    // app-shell (termasuk index.html) sudah ter-cache SEBELUM user
+    // sempat login pertama kali (mis. dibuka dulu waktu online, baru
+    // dipakai offline nanti).
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.warn('Registrasi service worker gagal:', err);
+      });
+    }
+
+    window.onload = function() {
+      handleMapVisibility();
+
+      // MIGRASI PWA: kalau sudah ada token sesi tersimpan (belum logout
+      // & belum expired di server), tidak perlu login ulang -- langsung
+      // ke dashboard. index.html sendiri yang akan mem-validasi token
+      // ini ke server tiap kali fetch data (lihat callGAS di sana),
+      // jadi kalau ternyata sudah kadaluarsa, index.html yang akan
+      // melempar balik ke sini.
+      if (localStorage.getItem('monproj_session_token')) {
+        window.location.replace('index.html');
+        return;
+      }
+
+      const saved = localStorage.getItem('nimon_user');
+
+      if (saved) {
+        document.getElementById('inputUsername').value = saved;
+        document.getElementById('rememberMe').checked = true;
+        document.getElementById('inputPassword').focus();
+      } else {
+        document.getElementById('inputUsername').focus();
+      }
+
+      // index.html menandai sessionStorage saat server menolak token
+      // (sesi habis / tidak valid) sebelum melempar user ke sini.
+      let loginNotice = null;
+      try {
+        loginNotice = sessionStorage.getItem('digimon_login_notice');
+        sessionStorage.removeItem('digimon_login_notice');
+      } catch (e) { /* abaikan */ }
+
+      if (loginNotice === 'expired') {
+        showAlert('warning', 'Sesi Anda telah berakhir atau tidak valid. Silakan login kembali.', 'Sesi Berakhir', function () {
+          document.getElementById(document.getElementById('inputUsername').value ? 'inputPassword' : 'inputUsername').focus();
+        });
+      }
+    };
+  </script>
+
+</body>
+</html>

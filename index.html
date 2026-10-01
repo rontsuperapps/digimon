@@ -3116,7 +3116,7 @@
 
       // Kotak total (overlay kiri bawah) + fallback grid (kalau peta tidak tersedia)
       const totalBody = berandaEl_('bmTotalBody');
-      if (totalBody) totalBody.innerHTML = berandaCardHtml_('Total Region Jawa Timur', null, res, loaded);
+      if (totalBody) totalBody.innerHTML = berandaCardHtml_('East Java Region', null, res, loaded);
       const fb = berandaEl_('bmFallback');
       if (fb) {
         fb.classList.toggle('show', berandaLeafletFailed_);
